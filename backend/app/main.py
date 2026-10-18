@@ -50,6 +50,12 @@ from .crud import (
     upsert_tag,
 )
 from .database import get_db
+from .fusion import (
+    VERDICT_CODE,
+    Signals,
+    fuse,
+    is_new_location,
+)
 from .identity_service import verify_nfc, verify_qr
 from .models import Base
 from .schemas import (
@@ -68,6 +74,13 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 from backend.identity.qr_identity import make_qr_payload, make_qr_image
 from backend.identity.nfc_ntag import EmulatedTag
+
+# ML scorer — returns None gracefully if model not yet trained
+import sys as _sys
+_ML_ROOT = str(Path(__file__).resolve().parents[2])
+if _ML_ROOT not in _sys.path:
+    _sys.path.insert(0, _ML_ROOT)
+from ml.scan_risk.scorer import score_scan
 
 app = FastAPI(
     title="Anti-Counterfeit API",
@@ -261,16 +274,15 @@ def sell_product(product_id: str, db: Session = Depends(get_db)):
 @app.post("/scan", response_model=ScanResponse, tags=["scan"])
 def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
     """
-    Verify a product scan.
+    Verify a product scan — full three-layer fusion (Phase 5).
 
-    1. Verify identity (QR signature or NFC counter+CMAC).
-    2. Read product from chain.
-    3. Store scan row in DB.
-    4. Return signals (chain, identity, risk placeholder).
-
-    The fusion verdict is set by Phase 5; here we return a basic verdict
-    so the endpoint is functional end-to-end for Phase 3 tests.
-    Phase 5 replaces the verdict logic with full fusion.
+    1. Layer 1a: Verify identity (QR HMAC signature or NFC counter+CMAC).
+    2. Layer 1b: Read product status from the blockchain.
+    3. Layer 2:  Compute ML risk score from scan history.
+    4. Layer 3:  Fuse all signals into one verdict.
+    5. Log the verdict on-chain via logScan().
+    6. Store the scan row in MySQL.
+    7. Return all signals and the verdict to the caller.
     """
     ts = req.timestamp or datetime.now(timezone.utc).replace(tzinfo=None)
     product_id = req.product_id
@@ -293,45 +305,51 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
         sold       = chain_data["sold"]
         chain_res  = "on_chain" if on_chain else "not_found"
     except Exception:
-        on_chain  = False
-        sold      = False
-        chain_res = "not_found"
+        on_chain, sold, chain_res = False, False, "not_found"
 
-    # ── 3. Basic verdict (Phase 5 will replace this) ─────────────────────────
-    if not on_chain:
-        verdict = "Unregistered product"
-        reason  = "Product ID not found on-chain"
-    elif id_result["result"] == "bad_mac":
-        verdict = "Suspicious activity"
-        reason  = id_result["reason"]
-    elif id_result["result"] == "invalid":
-        verdict = "Suspicious activity"
-        reason  = id_result["reason"]
-    elif id_result["result"] == "disputed":
-        verdict = "Manual review"
-        reason  = id_result["reason"]
-    elif sold:
-        verdict = "Manual review"
-        reason  = "Product already sold"
-    else:
-        verdict = "Verified"
-        reason  = "On-chain and identity check passed"
-
-    # ── 4. Log scan on-chain ─────────────────────────────────────────────────
-    verdict_map = {
-        "Verified": 0, "Manual review": 1,
-        "Suspicious activity": 2, "Unregistered product": 3,
+    # ── 3. ML risk score ─────────────────────────────────────────────────────
+    # Build a scan-history list from previous DB rows + the current scan
+    prior_rows  = get_scan_history(db, product_id)
+    current_row = {
+        "product_id":  product_id,
+        "timestamp":   ts.isoformat(),
+        "city":        "",          # city unknown at scan time
+        "lat":         req.lat,
+        "lon":         req.lon,
+        "device_hash": req.device_id or "",
+        "channel":     req.channel,
+        "nfc_counter": req.nfc_counter or 0,
+        "sold":        int(sold),
     }
-    scan_hash  = build_scan_hash(product_id, req.channel,
-                                  req.device_id or "", req.lat, req.lon, str(ts))
-    chain_tx   = None
+    scan_history = prior_rows + [current_row]
+    risk_score   = score_scan(scan_history)  # None if model not trained
+
+    # ── 3b. New-location detection ───────────────────────────────────────────
+    new_loc = is_new_location(product_id, req.lat, req.lon, prior_rows)
+
+    # ── 4. Fusion verdict ────────────────────────────────────────────────────
+    signals = Signals(
+        on_chain         = on_chain,
+        chain_result     = chain_res,
+        sold             = sold,
+        identity_result  = id_result["result"],
+        identity_reason  = id_result["reason"],
+        risk_score       = risk_score,
+        is_new_location  = new_loc,
+    )
+    verdict, reason = fuse(signals)
+
+    # ── 5. Log scan on-chain ─────────────────────────────────────────────────
+    scan_hash = build_scan_hash(product_id, req.channel,
+                                req.device_id or "", req.lat, req.lon, str(ts))
+    chain_tx  = None
     try:
-        log_receipt = chain_log_scan(product_id, scan_hash, verdict_map[verdict])
+        log_receipt = chain_log_scan(product_id, scan_hash, VERDICT_CODE[verdict])
         chain_tx    = log_receipt["tx_hash"]
     except Exception:
-        pass   # logScan failure is non-fatal for Phase 3
+        pass   # logScan failure is non-fatal (chain may be unavailable)
 
-    # ── 5. Store in DB ───────────────────────────────────────────────────────
+    # ── 6. Store in DB ───────────────────────────────────────────────────────
     store_scan(
         db,
         product_id      = product_id,
@@ -342,7 +360,7 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
         device_id       = req.device_id,
         chain_result    = chain_res,
         identity_result = id_result["result"],
-        risk_score      = None,   # set in Phase 5
+        risk_score      = risk_score,
         verdict         = verdict,
         reason          = reason,
     )
@@ -350,7 +368,7 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
     return ScanResponse(
         verdict         = verdict,
         reason          = reason,
-        risk_score      = None,
+        risk_score      = risk_score,
         chain_result    = chain_res,
         identity_result = id_result["result"],
         on_chain        = on_chain,

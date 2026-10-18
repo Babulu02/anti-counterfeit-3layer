@@ -1,0 +1,6 @@
+{
+  "random_forest": 0.28,
+  "isolation_forest": 0.5932825876674523,
+  "rule_speed_kmh": 500,
+  "rule_burst_1h": 3
+}
