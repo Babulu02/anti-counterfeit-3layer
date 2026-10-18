@@ -8,12 +8,20 @@
 
 module.exports = {
   networks: {
-    // Local Ganache – used for development and testing
+    // Ganache GUI on 7545 (manual use / MetaMask)
     development: {
       host: "127.0.0.1",
-      port: 7545,          // Ganache GUI default; our CLI script also uses 7545
-      network_id: "*",     // Accept any network id
-      gas: 6000000,        // Block gas limit headroom
+      port: 7545,
+      network_id: "*",
+      gas: 6000000,
+    },
+    // Deterministic Ganache CLI on 7546 — used by backend + pytest
+    // Start with: ganache --port 7546 --deterministic --accounts 10 --networkId 1337
+    cli: {
+      host: "127.0.0.1",
+      port: 7546,
+      network_id: "1337",
+      gas: 6000000,
     },
   },
 
