@@ -1,0 +1,43 @@
+# Secrets - NEVER commit these
+.env
+*.pem
+*.key
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# ML model weights > 50 MB (keep small ones)
+*.pkl
+*.joblib
+# Except tracked small models - override with !ml/scan_risk/model_*.joblib if needed
+
+# Truffle / Hardhat build artefacts
+contracts/build/
+contracts/.truffle_db/
+
+# Frontend build
+frontend/dist/
+frontend/node_modules/
+
+# Raw datasets (simulate and regenerate)
+data/scans.csv
+data/*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VS Code / Kiro
+.vscode/
+.kiro/

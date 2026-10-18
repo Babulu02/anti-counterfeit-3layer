@@ -1,0 +1,10 @@
+function,gas_used,description
+addManufacturer,47529,Owner adds a manufacturer to the whitelist
+registerProduct,115709,Whitelisted manufacturer registers a new product
+markSold,30978,Operator marks the product as sold
+logScan(verdict=0 Verified),26714,Operator logs a Verified verdict
+logScan(verdict=1 ManualReview),26726,Operator logs a ManualReview verdict
+logScan(verdict=2 Suspicious),26726,Operator logs a Suspicious verdict
+logScan(verdict=3 Unregistered),26726,Operator logs an Unregistered verdict (product not on chain)
+removeManufacturer,25518,Owner removes a manufacturer from the whitelist
+setOperator,30685,Owner changes the backend operator account
