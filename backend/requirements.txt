@@ -1,0 +1,19 @@
+# backend/requirements.txt
+# Pin every dependency so the environment is reproducible.
+# Install with:  pip install -r backend/requirements.txt
+
+# ── Identity layer (Phase 2) ────────────────────────────────────────────────
+qrcode[pil]==7.4.2        # QR code generation
+pycryptodome==3.20.0      # AES-CMAC (Crypto.Hash.CMAC + Crypto.Cipher.AES)
+Pillow==10.3.0            # PIL image support (required by qrcode[pil])
+
+# ── Testing ─────────────────────────────────────────────────────────────────
+pytest==7.4.4
+
+# ── Phase 3 (FastAPI backend) — to be uncommented when Phase 3 starts ───────
+# fastapi==0.111.0
+# uvicorn[standard]==0.29.0
+# web3==6.18.0
+# python-dotenv==1.0.1
+# sqlalchemy==2.0.30
+# httpx==0.27.0            # for pytest TestClient

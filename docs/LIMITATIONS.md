@@ -94,3 +94,24 @@ would require:
 - Gas fee strategy
 - A full audit of the smart contract
 - Consideration of block reorganizations affecting finality of scan logs
+
+---
+
+## L-009  HACP5 baseline flaw is intentional
+
+The `nfc_rewrite_baseline.py` module deliberately reproduces the known clone-first-race flaw
+of the HACP5 scheme: when a clone presents the current ID before the genuine tag, the genuine
+tag is flagged as a duplicate and permanently locked out (wrong-reject rate = 100% in N=1000
+trials with fixed seed 42).
+
+This is **not a bug** — it is an accurate reproduction of the published scheme's weakness,
+included as a measurable baseline.  Our counter+CMAC design (`nfc_ntag.py`) avoids this flaw
+by marking the disputed tap as DISPUTED rather than blocking the tag; the genuine tag's next
+tap is accepted (wrong-reject rate = 0% in same trials).
+
+---
+
+## L-010  randbytes used in experiments is Python 3.9+
+
+`random.Random.randbytes()` requires Python 3.9 or later.  The project targets Python 3.11
+(see VERSIONS.md), so this is not a compatibility issue in practice.

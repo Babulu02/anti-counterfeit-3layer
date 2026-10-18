@@ -1,0 +1,5 @@
+NOTE: all data is simulated,,,,
+scheme,n_trials,genuine_wrongly_rejected,wrong_reject_rate,description
+static_qr,1000,0,0.0000,Clone verifies same as genuine; identity layer cannot distinguish
+hacp5_baseline,1000,1000,1.0000,Clone wins race; genuine flagged duplicate (known flaw)
+nfc_cmac,1000,0,0.0000,Genuine DISPUTED on replay; next tap ACCEPTED (recoverable)

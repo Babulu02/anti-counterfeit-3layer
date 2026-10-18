@@ -3,7 +3,7 @@
 A three-layer anti-counterfeiting prototype combining blockchain, ML anomaly detection,
 and NFC/QR identity.
 
-> **Status:** Phase 1 complete (smart contract + tests).
+> **Status:** Phase 2 complete (smart contract + QR/NFC identity modules + tests).
 
 ---
 
@@ -150,13 +150,37 @@ anti-counterfeit-3layer/
 | Phase | Status | Description |
 |-------|--------|-------------|
 | 1 | ✅ Complete | Smart contract, Truffle tests, gas measurement |
-| 2 | ⏳ Next | QR + NFC identity module (`backend/identity.py`) |
-| 3 | ⏳ | FastAPI backend, SQLite, web3.py |
+| 2 | ✅ Complete | QR + NFC identity modules, HACP5 baseline, pytest (43/43), race experiment |
+| 3 | ⏳ Next | FastAPI backend, SQLite, web3.py |
 | 4 | ⏳ | Scan simulator, ML risk model |
 | 5 | ⏳ | Fusion layer (Layer 3 verdict) |
 | 6 | ⏳ | React frontend |
 | 7 | ⏳ | Experiment scripts for the paper |
 | 8 | ⏳ Optional | Image-consistency signal (MobileNetV2) |
+
+---
+
+## Phase 2: running the identity tests
+
+```powershell
+# From repo root
+python -m pytest backend/tests/test_identity.py -v
+```
+
+### Run the clone-first-race experiment
+
+```powershell
+python experiments/identity_race.py
+# Writes experiments/results/race.csv
+```
+
+**Results (N=1000 trials, seed=42, all data simulated):**
+
+| Scheme | Genuine wrongly rejected | Rate |
+|--------|--------------------------|------|
+| static_qr | 0 / 1000 | 0.0% — clone undetectable at identity layer |
+| hacp5_baseline | 1000 / 1000 | 100.0% — genuine always loses if clone goes first |
+| nfc_cmac (ours) | 0 / 1000 | 0.0% — genuine recoverable via next tap |
 
 ---
 
