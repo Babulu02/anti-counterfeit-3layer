@@ -62,7 +62,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     Returns a new DataFrame with FEATURE_COLS columns and the same index.
     """
     df = df.copy()
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
     df = df.sort_values(["product_id", "timestamp"]).reset_index(drop=True)
 
     # Use device_id or device_hash interchangeably
@@ -99,7 +99,12 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
                 td           = (ts - prev_ts).total_seconds() / 3600.0
                 time_delta_h = max(td, 0.0)
 
-            speed_kmh = (dist_km / time_delta_h) if time_delta_h > 0 else 0.0
+            if time_delta_h > 0:
+                speed_kmh = dist_km / time_delta_h
+            elif dist_km > 5.0:
+                speed_kmh = dist_km / (1.0 / 3600.0)  # instantaneous multi-city scan
+            else:
+                speed_kmh = 0.0
 
             # Rolling window counts
             window_1h  = grp[grp["timestamp"].between(ts - pd.Timedelta(hours=1),  ts, inclusive="left")]
@@ -118,7 +123,8 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
             # NFC counter gap
             if ch == "nfc":
                 nfc_gap = ctr - last_nfc_counter if last_nfc_counter >= 0 else 0
-                last_nfc_counter = ctr
+                if ctr > last_nfc_counter:
+                    last_nfc_counter = ctr
             else:
                 nfc_gap = 0
 

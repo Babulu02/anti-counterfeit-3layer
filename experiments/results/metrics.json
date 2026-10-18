@@ -1,131 +1,172 @@
 {
-  "note": "ALL DATA IS SIMULATED",
-  "models": {
+  "note": "ALL DATA IS SIMULATED. 5 seeds evaluated.",
+  "seeds": [
+    42,
+    7,
+    13,
+    99,
+    256
+  ],
+  "summary": {
     "rule_baseline": {
-      "model": "rule_baseline",
-      "precision": 1.0,
-      "recall": 0.5319148936170213,
-      "f1": 0.6944444444444444,
-      "roc_auc": 0.9040089400418845,
-      "false_alarm_rate_genuine": 0.0,
-      "per_attack_type": {
-        "E_nfc_replay": {
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "n": 8
-        },
-        "B_burst": {
-          "recall": 0.7142857142857143,
-          "precision": 1.0,
-          "f1": 0.8333333333333334,
-          "n": 84
-        },
-        "A_impossible_travel": {
-          "recall": 0.5,
-          "precision": 1.0,
-          "f1": 0.6666666666666666,
-          "n": 12
-        },
-        "F_nfc_clone_first": {
-          "recall": 0.0,
-          "precision": 0.0,
-          "f1": 0.0,
-          "n": 5
-        },
-        "C_slow_clone": {
-          "recall": 0.28125,
-          "precision": 1.0,
-          "f1": 0.43902439024390244,
-          "n": 32
-        }
+      "precision": {
+        "mean": 0.5258549825495714,
+        "std": 0.02319262390490169
+      },
+      "recall": {
+        "mean": 0.5033086448517545,
+        "std": 0.03401129072661587
+      },
+      "f1": {
+        "mean": 0.5134922963126259,
+        "std": 0.021111069996303793
+      },
+      "roc_auc": {
+        "mean": 0.7649837911777155,
+        "std": 0.011799055695046282
+      },
+      "false_alarm_rate_genuine": {
+        "mean": 0.11103675216228177,
+        "std": 0.007767391582624646
       }
     },
     "isolation_forest": {
-      "model": "isolation_forest",
-      "precision": 0.9384615384615385,
-      "recall": 0.8652482269503546,
-      "f1": 0.9003690036900369,
-      "roc_auc": 0.9924502402196294,
-      "false_alarm_rate_genuine": 0.019851116625310174,
-      "per_attack_type": {
-        "E_nfc_replay": {
-          "recall": 0.625,
-          "precision": 1.0,
-          "f1": 0.7692307692307693,
-          "n": 8
-        },
-        "B_burst": {
-          "recall": 0.8809523809523809,
-          "precision": 1.0,
-          "f1": 0.9367088607594937,
-          "n": 84
-        },
-        "A_impossible_travel": {
-          "recall": 0.8333333333333334,
-          "precision": 1.0,
-          "f1": 0.9090909090909091,
-          "n": 12
-        },
-        "F_nfc_clone_first": {
-          "recall": 1.0,
-          "precision": 1.0,
-          "f1": 1.0,
-          "n": 5
-        },
-        "C_slow_clone": {
-          "recall": 0.875,
-          "precision": 1.0,
-          "f1": 0.9333333333333333,
-          "n": 32
-        }
+      "precision": {
+        "mean": 0.9040391056571183,
+        "std": 0.024283777023355744
+      },
+      "recall": {
+        "mean": 0.7572758349512481,
+        "std": 0.017847214613303224
+      },
+      "f1": {
+        "mean": 0.8238272446786661,
+        "std": 0.01195165337080457
+      },
+      "roc_auc": {
+        "mean": 0.9596097216899497,
+        "std": 0.003259753525317077
+      },
+      "false_alarm_rate_genuine": {
+        "mean": 0.01970272480496949,
+        "std": 0.0049246342522066165
       }
     },
     "random_forest": {
-      "model": "random_forest",
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "roc_auc": 1.0,
-      "false_alarm_rate_genuine": 0.0,
-      "per_attack_type": {
-        "E_nfc_replay": {
-          "recall": 1.0,
-          "precision": 1.0,
-          "f1": 1.0,
-          "n": 8
-        },
-        "B_burst": {
-          "recall": 1.0,
-          "precision": 1.0,
-          "f1": 1.0,
-          "n": 84
-        },
-        "A_impossible_travel": {
-          "recall": 1.0,
-          "precision": 1.0,
-          "f1": 1.0,
-          "n": 12
-        },
-        "F_nfc_clone_first": {
-          "recall": 1.0,
-          "precision": 1.0,
-          "f1": 1.0,
-          "n": 5
-        },
-        "C_slow_clone": {
-          "recall": 1.0,
-          "precision": 1.0,
-          "f1": 1.0,
-          "n": 32
-        }
+      "precision": {
+        "mean": 0.9997706422018349,
+        "std": 0.0004587155963302614
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "f1": {
+        "mean": 0.9998852553069421,
+        "std": 0.00022948938611588862
+      },
+      "roc_auc": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "false_alarm_rate_genuine": {
+        "mean": 6.345177664974618e-05,
+        "std": 0.00012690355329949237
       }
     }
   },
+  "per_attack_type": {
+    "A_impossible_travel": {
+      "f1": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "precision": {
+        "mean": 1.0,
+        "std": 0.0
+      }
+    },
+    "B_burst": {
+      "f1": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "precision": {
+        "mean": 1.0,
+        "std": 0.0
+      }
+    },
+    "C_slow_clone": {
+      "f1": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "precision": {
+        "mean": 1.0,
+        "std": 0.0
+      }
+    },
+    "E_nfc_replay": {
+      "f1": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "precision": {
+        "mean": 1.0,
+        "std": 0.0
+      }
+    },
+    "F_nfc_clone_first": {
+      "f1": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "precision": {
+        "mean": 1.0,
+        "std": 0.0
+      }
+    },
+    "G_stealth_clone": {
+      "f1": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "recall": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "precision": {
+        "mean": 1.0,
+        "std": 0.0
+      }
+    }
+  },
+  "held_out_attack": "G_stealth_clone",
   "thresholds": {
-    "random_forest": 0.28,
-    "isolation_forest": 0.5932825876674523,
-    "rule_speed_kmh": 500,
-    "rule_burst_1h": 3
+    "random_forest": 0.23,
+    "isolation_forest": 0.5892205181896621,
+    "rule_speed_kmh": 500.0,
+    "rule_burst_1h": 3,
+    "rule_gap_thresh": 8
   }
 }

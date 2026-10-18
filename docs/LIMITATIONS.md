@@ -153,3 +153,20 @@ tag (genuine_rejected = 1.000, genuine_recovered = 0.000).  The counter+CMAC
 scheme is strictly better: it never permanently rejects the genuine tag.
 
 See `docs/results_race.md` for the full experiment numbers.
+
+---
+
+## L-012  RandomForest near-perfect performance and synthetic sequence-length bias
+
+In the 5-seed evaluation on 2000 products (`data/scans.csv`, 16,213 scans), RandomForest achieves near-perfect test metrics (F1 = 0.9999 +/- 0.0002, ROC-AUC = 1.000), even on the held-out attack variant (`G_stealth_clone`).
+
+**Feature Importance & Ablation Analysis:**
+- MDI feature importance reveals that the model relies disproportionately on:
+  1. `distinct_devices` (28.1%)
+  2. `total_scans` (22.4%)
+  3. `speed_kmh` (15.8%)
+  4. `sold` (12.5%)
+- In a feature ablation test, removing `total_scans` and `sold` caused the isolated F1 to collapse to 0.041.
+- **Root Cause (Synthetic Sequence-Length Bias):** In the simulation, genuine journeys contain 4 to 8 lifetime hops (3 supply-chain hops + 1-4 consumer taps), whereas simulated attack sequences are appended onto genuine timelines, naturally elevating `total_scans` (reaching 8-25) and inflating `distinct_devices` beyond the typical consumer range.
+- In real-world physical retail deployments, genuine products scanned by large households, store clerks, or second-hand buyers could reach higher scan counts, diminishing the separation provided by `total_scans`. Real-world deployments must normalize running counters against product age or rely more heavily on orthogonal signals (such as NFC CMAC verification and impossible velocity).
+
