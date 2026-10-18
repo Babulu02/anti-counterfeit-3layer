@@ -34,8 +34,12 @@ from app.config import get_settings
 from app.database import SessionLocal
 from app.crud import create_product, get_product_by_pid, upsert_tag
 from app.chain import chain_register_product
-from backend.identity.qr_identity import make_qr_payload
-from backend.identity.nfc_ntag import EmulatedTag
+try:
+    from identity.qr_identity import make_qr_payload
+    from identity.nfc_ntag import EmulatedTag
+except ImportError:
+    from backend.identity.qr_identity import make_qr_payload
+    from backend.identity.nfc_ntag import EmulatedTag
 
 settings = get_settings()
 
