@@ -1,5 +1,11 @@
-NOTE: all data is simulated,,,,
-scheme,n_trials,genuine_wrongly_rejected,wrong_reject_rate,description
-static_qr,1000,0,0.0000,Clone verifies same as genuine; identity layer cannot distinguish
-hacp5_baseline,1000,1000,1.0000,Clone wins race; genuine flagged duplicate (known flaw)
-nfc_cmac,1000,0,0.0000,Genuine DISPUTED on replay; next tap ACCEPTED (recoverable)
+"NOTE: all data is simulated. Seeds: [42, 7, 13, 99, 256]",,,,,,,,,,
+scheme,scenario,n_trials,clone_accepted_rate_mean,clone_accepted_rate_std,genuine_rejected_rate_mean,genuine_rejected_rate_std,genuine_disputed_rate_mean,genuine_disputed_rate_std,genuine_recovered_rate_mean,genuine_recovered_rate_std
+static_qr,replay,1000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+static_qr,skim_first,1000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+static_qr,guess,1000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+hacp5_baseline,replay,1000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+hacp5_baseline,skim_first,1000,1.0000,0.0000,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+hacp5_baseline,guess,1000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+nfc_cmac,replay,1000,0.0000,0.0000,0.0000,0.0000,0.3718,0.0181,1.0000,0.0000
+nfc_cmac,skim_first,1000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000,1.0000,0.0000
+nfc_cmac,guess,1000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000

@@ -532,3 +532,224 @@ class TestHACP5Unknown:
         result = verifier.scan(tag)
         assert result["valid"] is False
         assert result["status"] == "unknown"
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 16  RACE SCENARIOS (all three schemes × all three scenarios)
+#     Tests the logic from experiments/identity_race.py at unit-test granularity.
+# ════════════════════════════════════════════════════════════════════════════
+
+import random as _random
+import sys as _sys
+import os as _os
+_sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "..", ".."))
+from experiments.identity_race import (
+    sample_params,
+    trial_qr_replay, trial_qr_skim_first, trial_qr_guess,
+    trial_hacp5_replay, trial_hacp5_skim_first, trial_hacp5_guess,
+    trial_nfc_replay, trial_nfc_skim_first, trial_nfc_guess,
+    TrialResult,
+)
+
+# Fixed RNG and params helpers for deterministic unit tests
+_SEED     = 42
+_MK_QR    = b"experiment-hmac-secret-32-bytesX"
+_MK_NFC   = bytes.fromhex("cafebabecafebabecafebabecafebabe")
+
+
+def _rng():
+    return _random.Random(_SEED)
+
+
+def _params(prior_taps=3, missed_taps=0, capture_point=1, clone_first=True):
+    from experiments.identity_race import TrialParams
+    return TrialParams(prior_taps, missed_taps, capture_point, clone_first)
+
+
+class TestRaceScenariosQR:
+    """Group 16a: static_qr × all scenarios."""
+
+    def test_qr_replay_genuine_never_rejected(self):
+        """QR has no freshness — replay never rejects the genuine tag."""
+        r = trial_qr_replay(_rng(), _params())
+        assert not r.genuine_rejected
+
+    def test_qr_replay_clone_always_accepted(self):
+        """Replayed QR payload always verifies — documented baseline weakness."""
+        r = trial_qr_replay(_rng(), _params())
+        assert r.clone_accepted
+
+    def test_qr_skim_first_genuine_never_rejected(self):
+        r = trial_qr_skim_first(_rng(), _params())
+        assert not r.genuine_rejected
+
+    def test_qr_skim_first_clone_accepted(self):
+        r = trial_qr_skim_first(_rng(), _params())
+        assert r.clone_accepted
+
+    def test_qr_guess_clone_rejected(self):
+        """Random forged HMAC is rejected."""
+        r = trial_qr_guess(_rng(), _params())
+        assert not r.clone_accepted
+
+    def test_qr_guess_genuine_not_rejected(self):
+        r = trial_qr_guess(_rng(), _params())
+        assert not r.genuine_rejected
+
+    def test_qr_no_disputed_state(self):
+        """QR has no disputed state — always False for all scenarios."""
+        for fn in (trial_qr_replay, trial_qr_skim_first, trial_qr_guess):
+            r = fn(_rng(), _params())
+            assert not r.genuine_disputed
+
+
+class TestRaceScenariosHACP5:
+    """Group 16b: hacp5_baseline × all scenarios."""
+
+    def test_hacp5_replay_stale_clone_rejected(self):
+        """Replayed stale ID is duplicate — clone fails."""
+        r = trial_hacp5_replay(_rng(), _params(prior_taps=3))
+        assert not r.clone_accepted
+
+    def test_hacp5_replay_genuine_accepted(self):
+        """After stale-replay, genuine still holds current ID → valid."""
+        r = trial_hacp5_replay(_rng(), _params(prior_taps=3))
+        assert not r.genuine_rejected
+
+    def test_hacp5_skim_first_clone_accepted(self):
+        """Clone with current ID scans first → accepted."""
+        r = trial_hacp5_skim_first(_rng(), _params())
+        assert r.clone_accepted
+
+    def test_hacp5_skim_first_genuine_rejected(self):
+        """After clone-first, genuine has old ID → rejected as duplicate (known flaw)."""
+        r = trial_hacp5_skim_first(_rng(), _params())
+        assert r.genuine_rejected, (
+            "HACP5 FLAW: genuine must be rejected after skim-first — "
+            "this is the expected baseline flaw."
+        )
+
+    def test_hacp5_guess_clone_rejected(self):
+        """Random 32-byte ID has negligible chance of matching."""
+        # Run 20 trials; probability of accidental match ≈ 0
+        rng = _random.Random(_SEED)
+        for _ in range(20):
+            p = sample_params(rng)
+            r = trial_hacp5_guess(rng, p)
+            assert not r.clone_accepted
+
+    def test_hacp5_guess_genuine_not_rejected(self):
+        """Random guess doesn't consume the current ID — genuine still valid."""
+        r = trial_hacp5_guess(_rng(), _params())
+        assert not r.genuine_rejected
+
+    def test_hacp5_no_disputed_state(self):
+        """HACP5 has no disputed state — only valid/duplicate."""
+        for fn in (trial_hacp5_replay, trial_hacp5_skim_first, trial_hacp5_guess):
+            r = fn(_rng(), _params(prior_taps=2))
+            assert not r.genuine_disputed
+
+
+class TestRaceScenariosNFCCMAC:
+    """Group 16c: nfc_cmac × all scenarios."""
+
+    def test_nfc_replay_clone_disputed(self):
+        """Replayed (already-accepted) tap → DISPUTED, not accepted."""
+        r = trial_nfc_replay(_rng(), _params(prior_taps=3, missed_taps=0))
+        assert not r.clone_accepted
+
+    def test_nfc_replay_genuine_not_rejected(self):
+        """After replay attempt, genuine tap (within gap) is accepted."""
+        r = trial_nfc_replay(_rng(), _params(prior_taps=3, missed_taps=0))
+        assert not r.genuine_rejected
+
+    def test_nfc_skim_first_clone_accepted(self):
+        """
+        Skimmed-and-presented-first valid tap is ACCEPTED.
+        The identity layer alone CANNOT block this — see docs/LIMITATIONS.md §L-011.
+        Detection requires scan-risk and fusion layers.
+        """
+        r = trial_nfc_skim_first(_rng(), _params())
+        assert r.clone_accepted, (
+            "Skimmed valid tap should be ACCEPTED by the identity layer. "
+            "Blocking it requires the scan-risk / fusion layer (Phase 4/5)."
+        )
+
+    def test_nfc_skim_first_genuine_disputed_not_rejected(self):
+        """
+        After skim-first, genuine presents the same counter → DISPUTED (replay).
+        It must NOT be hard-REJECTED.
+        """
+        r = trial_nfc_skim_first(_rng(), _params())
+        assert r.genuine_disputed, "Genuine should be DISPUTED after skim-first"
+        assert not r.genuine_rejected, "Genuine must NOT be hard-rejected"
+
+    def test_nfc_skim_first_genuine_recovered(self):
+        """
+        After being DISPUTED, genuine's next tap (counter+1) is ACCEPTED.
+        This is the key advantage over HACP5.
+        """
+        r = trial_nfc_skim_first(_rng(), _params())
+        assert r.genuine_recovered, (
+            "Genuine must recover (next tap ACCEPTED) after skim-first dispute."
+        )
+
+    def test_nfc_guess_clone_rejected(self):
+        """Random CMAC is rejected (bad_mac)."""
+        rng = _random.Random(_SEED)
+        for _ in range(10):
+            p = sample_params(rng)
+            r = trial_nfc_guess(rng, p)
+            assert not r.clone_accepted
+
+    def test_nfc_guess_genuine_not_rejected(self):
+        """Guess attempt doesn't advance last_seen — genuine tap is accepted."""
+        r = trial_nfc_guess(_rng(), _params(prior_taps=2))
+        assert not r.genuine_rejected
+
+    def test_nfc_guess_genuine_not_disputed(self):
+        """Guess attempt does not cause genuine tag to be disputed."""
+        r = trial_nfc_guess(_rng(), _params(prior_taps=2))
+        assert not r.genuine_disputed
+
+    def test_nfc_skim_first_recovered_rate_high(self):
+        """
+        Over 50 skim-first trials, genuine recovery rate must be 100%
+        (counter+CMAC never permanently blocks the genuine tag).
+        """
+        rng = _random.Random(_SEED)
+        recovered = 0
+        disputed  = 0
+        for _ in range(50):
+            p = sample_params(rng)
+            r = trial_nfc_skim_first(rng, p)
+            if r.genuine_disputed:
+                disputed += 1
+                if r.genuine_recovered:
+                    recovered += 1
+        # All disputed cases should recover
+        assert disputed > 0, "Expected some disputed results in 50 trials"
+        assert recovered == disputed, (
+            f"Expected all {disputed} disputed cases to recover, "
+            f"got {recovered}"
+        )
+
+    def test_nfc_replay_stats_over_many_trials(self):
+        """
+        Over 100 replay trials: clone should NEVER be accepted
+        (replayed counter is always <= last_seen after prior taps).
+        """
+        rng = _random.Random(_SEED)
+        clone_accepted = 0
+        for _ in range(100):
+            p = sample_params(rng)
+            # Ensure at least 1 prior tap so there is a captured tap to replay
+            from experiments.identity_race import TrialParams
+            p2 = TrialParams(
+                max(1, p.prior_taps), p.missed_taps, p.capture_point, p.clone_first
+            )
+            r = trial_nfc_replay(rng, p2)
+            clone_accepted += int(r.clone_accepted)
+        assert clone_accepted == 0, (
+            f"Replay should never be accepted, but was {clone_accepted}/100 times"
+        )

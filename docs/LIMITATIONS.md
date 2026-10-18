@@ -115,3 +115,41 @@ tap is accepted (wrong-reject rate = 0% in same trials).
 
 `random.Random.randbytes()` requires Python 3.9 or later.  The project targets Python 3.11
 (see VERSIONS.md), so this is not a compatibility issue in practice.
+
+---
+
+## L-011  counter+CMAC cannot block a skimmed-and-presented-first valid tap
+
+The AES-CMAC + rolling counter scheme (`nfc_ntag.py`) is **not immune** to an
+attacker who can skim an unused valid tap from the genuine tag and present it to
+the server before the genuine owner does.
+
+**Why the identity layer cannot block it:**
+A valid skimmed tap `(uid, counter, cmac)` is cryptographically identical to a
+legitimate first scan of that counter value.  The verifier has no way to
+distinguish "genuine owner presenting counter N for the first time" from
+"attacker presenting a stolen counter N for the first time."
+
+**What the identity layer does provide:**
+After the attacker's skimmed tap is accepted, the genuine tag presents the same
+counter and receives a **DISPUTED** result.  This is a soft signal — not a hard
+block.  The genuine tag always recovers on its next tap (genuine_recovered =
+1.000 across 1 000 trials × 5 seeds in the skim-first scenario).
+
+**How the attack is detected and blocked in the full system:**
+The DISPUTED result is forwarded as a signal to:
+1. **Layer 2 — scan-risk model (Phase 4):** Two accepted scans of the same
+   counter from different device hashes / locations is a feature used by the
+   IsolationForest and RandomForest models.
+2. **Layer 3 — fusion (Phase 5):** A DISPUTED NFC tag combined with a
+   suspicious scan pattern triggers the "Suspicious activity" verdict.
+
+In other words, the counter+CMAC scheme deliberately raises a flag rather than
+silently failing.  The full three-layer system is required to act on that flag.
+
+**Comparison with HACP5:** The HACP5 baseline also accepts the skimmed tap
+(skim_first clone_accepted = 1.000) but then permanently locks out the genuine
+tag (genuine_rejected = 1.000, genuine_recovered = 0.000).  The counter+CMAC
+scheme is strictly better: it never permanently rejects the genuine tag.
+
+See `docs/results_race.md` for the full experiment numbers.
