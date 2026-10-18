@@ -1,0 +1,18 @@
+# NOTE: ALL DATA IS SIMULATED. End-to-end API latency measured over 200 live requests.
+type,name_or_function,value,unit
+gas,addManufacturer,47529,gas
+gas,registerProduct,115709,gas
+gas,markSold,30978,gas
+gas,logScan(verdict=0 Verified),26714,gas
+gas,logScan(verdict=1 ManualReview),26726,gas
+gas,logScan(verdict=2 Suspicious),26726,gas
+gas,logScan(verdict=3 Unregistered),26726,gas
+gas,removeManufacturer,25518,gas
+gas,setOperator,30685,gas
+latency_e2e_api,median,192.46,ms
+latency_e2e_api,p95,218.52,ms
+latency_e2e_api,mean,193.35,ms
+latency_e2e_api,std,15.0,ms
+latency_e2e_api,min,161.93,ms
+latency_e2e_api,max,232.83,ms
+latency_e2e_api,requests_count,200,requests
