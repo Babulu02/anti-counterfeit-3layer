@@ -28,14 +28,15 @@ They still work but receive no new updates.
 | Tool | Version |
 |------|---------|
 | Python | 3.11.9 |
-| FastAPI | 0.111.x (to be pinned in requirements.txt) |
-| web3.py | 6.x (to be pinned) |
-| SQLite | bundled with Python 3.11 |
-| scikit-learn | 1.4.x (to be pinned) |
-| pandas | 2.x (to be pinned) |
-| numpy | 1.26.x (to be pinned) |
-| joblib | 1.3.x (to be pinned) |
-| pytest | 7.x (to be pinned) |
+| FastAPI | 0.111.0 |
+| web3.py | 8.0.0 |
+| MySQL | 9.x via PyMySQL 1.1.1 + SQLAlchemy 2.0.30 |
+| Alembic | 1.13.2 |
+| scikit-learn | 1.4.2 |
+| pandas | 2.2.2 |
+| numpy | 1.26.4 |
+| joblib | 1.4.2 |
+| pytest | 7.4.4 |
 
 ## Frontend (Phase 6)
 

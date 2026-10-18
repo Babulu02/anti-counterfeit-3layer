@@ -1,10 +1,12 @@
 # Secrets - NEVER commit these
 .env
+.env.local
 *.pem
 *.key
 
 # Node
 node_modules/
+dist/
 npm-debug.log*
 
 # Python
@@ -14,7 +16,6 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
-dist/
 build/
 
 # ML model weights > 50 MB (keep small ones)
@@ -30,9 +31,14 @@ contracts/.truffle_db/
 frontend/dist/
 frontend/node_modules/
 
-# Raw datasets (simulate and regenerate)
+# Raw datasets & images (simulate and regenerate)
 data/scans.csv
 data/*.csv
+data/product-images/
+
+# Log files and command outputs
+*_out.txt
+*_err.txt
 
 # OS
 .DS_Store

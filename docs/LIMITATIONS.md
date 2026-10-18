@@ -48,7 +48,7 @@ The system collects scan latitude/longitude to detect impossible travel. This cr
 a geolocation trail per scan event. Mitigations implemented:
 
 - Raw coordinates are never stored on-chain (only a hash, see DECISIONS.md D-007).
-- The SQLite database stores raw coordinates; in production it should be encrypted at rest
+- The MySQL database stores raw coordinates; in production it should be encrypted at rest
   and subject to a retention policy (e.g. delete after 90 days).
 - Users scanning products are not explicitly consenting to location tracking in this prototype.
   A production system must comply with GDPR / local privacy law.

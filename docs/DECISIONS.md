@@ -8,7 +8,7 @@ Add a new entry whenever a significant decision is made.
 ## D-001  No strings stored on-chain
 
 **Decision:** All on-chain data uses `bytes32` hashes. Product names, descriptions, images,
-and QR/NFC payloads live in the off-chain SQLite database.
+and QR/NFC payloads live in the off-chain MySQL database.
 
 **Reason:** String storage in Solidity is expensive (each character costs gas) and exposes
 product details publicly on the blockchain. Storing only hashes gives us integrity guarantees

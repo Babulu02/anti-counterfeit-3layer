@@ -121,10 +121,9 @@ anti-counterfeit-3layer/
 │   │   ├── Migrations.sol
 │   │   └── ProductRegistry.sol
 │   ├── migrations/
-│   ├── test/
 │   │   └── ProductRegistry.test.js
 │   └── truffle-config.js
-├── backend/                ← FastAPI + SQLite (Phase 3)
+├── backend/                ← FastAPI + MySQL + web3.py v8 (Phase 3)
 ├── ml/                     ← ML risk model (Phase 4)
 │   └── scan_risk/
 ├── frontend/               ← React + Vite (Phase 6)
@@ -151,11 +150,11 @@ anti-counterfeit-3layer/
 |-------|--------|-------------|
 | 1 | ✅ Complete | Smart contract, Truffle tests, gas measurement |
 | 2 | ✅ Complete | QR + NFC identity modules, HACP5 baseline, pytest (43/43), race experiment |
-| 3 | ⏳ Next | FastAPI backend, SQLite, web3.py |
-| 4 | ⏳ | Scan simulator, ML risk model |
-| 5 | ⏳ | Fusion layer (Layer 3 verdict) |
-| 6 | ⏳ | React frontend |
-| 7 | ⏳ | Experiment scripts for the paper |
+| 3 | ✅ Complete | FastAPI backend, MySQL, web3.py v8 |
+| 4 | ✅ Complete | Scan simulator, ML risk model (Rule / IF / RF) |
+| 5 | ✅ Complete | Fusion layer (Layer 3 verdict, 55 tests passing) |
+| 6 | ✅ Complete | React frontend (build-tested) |
+| 7 | ⏳ In Progress | Master experiment suite for the paper (run_all.py) |
 | 8 | ⏳ Optional | Image-consistency signal (MobileNetV2) |
 
 ---
