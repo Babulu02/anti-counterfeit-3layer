@@ -16,7 +16,7 @@
  */
 
 import { useState } from "react";
-import { registerProduct, postScan, type ScanResponse } from "../lib/api";
+import { registerProduct, postScan, sellProduct, type ScanResponse } from "../lib/api";
 import VerdictBadge from "../components/VerdictBadge";
 import Card from "../components/Card";
 
@@ -99,7 +99,7 @@ const SCENARIOS = [
     run: async (): Promise<ScanResponse[]> => {
       const { pid, qr } = await createDemoProduct("Sold");
       // Sell it via the backend
-      await fetch(`${import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000"}/products/${encodeURIComponent(pid)}/sell`, { method: "POST" });
+      await sellProduct(pid);
       return [await postScan({ product_id: pid, channel: "qr", qr_payload: qr })];
     },
   },

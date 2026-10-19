@@ -82,10 +82,20 @@ if _ML_ROOT not in _sys.path:
     _sys.path.insert(0, _ML_ROOT)
 from ml.scan_risk.scorer import score_scan
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Anti-Counterfeit API",
     description="Three-layer anti-counterfeiting: blockchain + ML + fusion",
     version="0.3.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 settings = get_settings()
