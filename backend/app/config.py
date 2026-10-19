@@ -25,17 +25,17 @@ class Settings:
     """All environment variables with typed defaults."""
 
     # ── Database ─────────────────────────────────────────────────────────────
-    db_user:     str = os.environ["DB_USER"]
-    db_password: str = os.environ["DB_PASSWORD"]   # never printed
+    db_user:     str = os.getenv("DB_USER", "root")
+    db_password: str = os.getenv("DB_PASSWORD", "")   # never printed
     db_host:     str = os.getenv("DB_HOST", "127.0.0.1")
     db_port:     int = int(os.getenv("DB_PORT", "3306"))
-    db_name:     str = os.environ["DB_NAME"]
-    test_db_name: str = os.environ["TEST_DB_NAME"]
+    db_name:     str = os.getenv("DB_NAME", "anticounterfeit")
+    test_db_name: str = os.getenv("TEST_DB_NAME", "anticounterfeit_test")
 
     # ── Blockchain ────────────────────────────────────────────────────────────
     rpc_url:              str = os.getenv("RPC_URL", "http://127.0.0.1:7546")
-    contract_address:     str = os.environ["CONTRACT_ADDRESS"]
-    operator_private_key: str = os.environ["OPERATOR_PRIVATE_KEY"]
+    contract_address:     str = os.getenv("CONTRACT_ADDRESS", "")
+    operator_private_key: str = os.getenv("OPERATOR_PRIVATE_KEY", "")
     owner_private_key:    str = os.getenv("OWNER_PRIVATE_KEY", "")
     manufacturer_private_key: str = os.getenv("MANUFACTURER_PRIVATE_KEY", "")
 
@@ -44,8 +44,8 @@ class Settings:
         "contracts" / "build" / "contracts" / "ProductRegistry.json"
 
     # ── Identity secrets ──────────────────────────────────────────────────────
-    identity_hmac_secret: bytes = bytes.fromhex(os.environ["IDENTITY_HMAC_SECRET"])
-    nfc_master_key:        bytes = bytes.fromhex(os.environ["NFC_MASTER_KEY"])
+    identity_hmac_secret: bytes = bytes.fromhex(os.getenv("IDENTITY_HMAC_SECRET", "00" * 32))
+    nfc_master_key:        bytes = bytes.fromhex(os.getenv("NFC_MASTER_KEY", "cafebabecafebabecafebabecafebabe"))
 
     # ── ML artefacts ──────────────────────────────────────────────────────────
     ml_model_path:      str = os.getenv("ML_MODEL_PATH",
@@ -55,8 +55,13 @@ class Settings:
     sop_root:           str = os.getenv("SOP_ROOT",
                                         "C:\\Project-MF\\Stanford_Online_Products")
 
-    def db_url(self, db_name: str | None = None) -> URL:
-        """Return a SQLAlchemy URL for the given database name (default: DB_NAME)."""
+    def db_url(self, db_name: str | None = None) -> URL | str:
+        """Return a SQLAlchemy URL (supports cloud DATABASE_URL e.g. on Render/Railway)."""
+        raw_url = os.getenv("DATABASE_URL")
+        if raw_url:
+            if raw_url.startswith("postgres://"):
+                raw_url = raw_url.replace("postgres://", "postgresql://", 1)
+            return raw_url
         return URL.create(
             drivername="mysql+pymysql",
             username=self.db_user,

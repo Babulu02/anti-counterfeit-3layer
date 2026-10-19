@@ -44,6 +44,7 @@ from .crud import (
     get_product_by_pid,
     get_scan_history,
     list_products,
+    list_recent_scans,
     list_scans,
     mark_product_sold,
     store_scan,
@@ -103,6 +104,19 @@ settings = get_settings()
 # Directory for uploaded product images
 _IMAGES_DIR = Path(_ROOT) / "data" / "product-images"
 _IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@app.on_event("startup")
+def on_startup():
+    """Ensure database tables and directories exist on startup."""
+    try:
+        from .database import engine
+        from .models import Base
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:
+        import logging
+        logging.warning(f"Could not auto-create database tables on startup: {exc}")
+
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -467,3 +481,10 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
 def get_scans(product_id: str, db: Session = Depends(get_db)):
     """Return all scan events for a product."""
     return list_scans(db, product_id)
+
+
+@app.get("/scans/recent", response_model=list[ScanOut], tags=["scan"])
+def get_recent_scans(limit: int = 100, db: Session = Depends(get_db)):
+    """Return the most recent scans across all products for telemetry and dashboard."""
+    return list_recent_scans(db, limit=limit)
+

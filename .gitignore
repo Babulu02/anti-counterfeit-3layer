@@ -1,49 +1,63 @@
 # Secrets - NEVER commit these
 .env
-.env.local
+.env.*
+!.env.example
 *.pem
 *.key
 
-# Node
-node_modules/
-dist/
-npm-debug.log*
-
-# Python
+# Python Virtual Environments & Caches (Crucial: never push .venv)
+.venv/
+**/.venv/
+venv/
+**/venv/
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
-.venv/
-venv/
+*.pyd
 *.egg-info/
 build/
+.pytest_cache/
+**/.pytest_cache/
 
-# ML model weights > 50 MB (keep small ones)
+# Node & Frontend Build Artefacts
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Large ML model weights & data
 *.pkl
 *.joblib
-# Except tracked small models - override with !ml/scan_risk/model_*.joblib if needed
+!experiments/results/*.joblib
 
-# Truffle / Hardhat build artefacts
-contracts/build/
-contracts/.truffle_db/
-
-# Frontend build
-frontend/dist/
-frontend/node_modules/
-
-# Raw datasets & images (simulate and regenerate)
+# Raw datasets & product images (Crucial: never push product-images or large raw CSVs)
+data/product-images/
+**/product-images/
 data/scans.csv
 data/*.csv
-data/product-images/
+!data/README.md
 
-# Log files and command outputs
+# Truffle Build Artefacts (Keep ProductRegistry.json ABI for backend/frontend integration)
+contracts/build/
+!contracts/build/contracts/ProductRegistry.json
+contracts/.truffle_db/
+
+# Log files and archives
 *_out.txt
 *_err.txt
+*.log
+*.zip
+*.tar.gz
 
-# OS
+# OS-specific
 .DS_Store
 Thumbs.db
 
-# VS Code / Kiro
+# IDE configurations
 .vscode/
+.idea/
 .kiro/

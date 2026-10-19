@@ -1,13 +1,3 @@
-/**
- * src/pages/AdminPage.tsx
- * =======================
- * Contract Administration Portal:
- *  - Connects to MetaMask with Contract Owner (Ganache Account #0).
- *  - Whitelist and revoke manufacturers directly on-chain using MetaMask.
- *  - Displays live on-chain contract roles (Owner, Operator, Manufacturer statuses).
- *  - Provides one-click whitelisting for deterministic Ganache manufacturer accounts.
- */
-
 import { useState, useEffect } from "react";
 import Card from "../components/Card";
 import { getChainInfo, type ChainInfo } from "../lib/api";
@@ -24,11 +14,11 @@ import {
 // Deterministic Ganache Accounts Reference
 const DETERMINISTIC_ACCOUNTS = [
   { index: 0, role: "Contract Owner / Admin", address: "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1" },
-  { index: 1, role: "Backend Operator",        address: "0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0" },
-  { index: 2, role: "Manufacturer (in .env)",  address: "0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b" },
-  { index: 3, role: "Manufacturer 2",          address: "0xE11BA2b4D45Eaed5996Cd0823791E0C93114882d" },
-  { index: 4, role: "Manufacturer 3",          address: "0xd03ea8624C8C5987235048901fB614fDcA89b117" },
-  { index: 5, role: "Manufacturer 4",          address: "0x95cED938F7991cd0dFcb48F0a06a40FA1aF46EBC" },
+  { index: 1, role: "Backend Operator", address: "0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0" },
+  { index: 2, role: "Manufacturer (in .env)", address: "0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b" },
+  { index: 3, role: "Manufacturer 2", address: "0xE11BA2b4D45Eaed5996Cd0823791E0C93114882d" },
+  { index: 4, role: "Manufacturer 3", address: "0xd03ea8624C8C5987235048901fB614fDcA89b117" },
+  { index: 5, role: "Manufacturer 4", address: "0x95cED938F7991cd0dFcb48F0a06a40FA1aF46EBC" },
 ];
 
 export default function AdminPage() {
@@ -48,7 +38,11 @@ export default function AdminPage() {
 
   // Action state
   const [busy, setBusy] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error" | "info"; text: string; txHash?: string } | null>(null);
+  const [statusMsg, setStatusMsg] = useState<{
+    type: "success" | "error" | "info";
+    text: string;
+    txHash?: string;
+  } | null>(null);
 
   // Initial load: get chain info from backend
   useEffect(() => {
@@ -98,36 +92,34 @@ export default function AdminPage() {
 
   // Listen to MetaMask account / chain changes
   useEffect(() => {
-    if (!isMetaMaskAvailable()) return;
-    const eth = (window as unknown as { ethereum: any }).ethereum;
-    const handleAccountsChanged = (accs: string[]) => {
-      setAccount(accs[0] ?? null);
-    };
-    const handleChainChanged = () => {
-      ensureCorrectChain().then(setChainOk);
-    };
-
-    eth.on?.("accountsChanged", handleAccountsChanged);
-    eth.on?.("chainChanged", handleChainChanged);
-
-    return () => {
-      eth.removeListener?.("accountsChanged", handleAccountsChanged);
-      eth.removeListener?.("chainChanged", handleChainChanged);
-    };
-  }, []);
-
-  // Check if MetaMask already has connected accounts on mount
-  useEffect(() => {
-    if (isMetaMaskAvailable()) {
-      const eth = (window as unknown as { ethereum: any }).ethereum;
-      eth.request?.({ method: "eth_accounts" })
-        .then((accs: string[]) => {
-          if (accs && accs[0]) {
-            setAccount(accs[0]);
+    if (typeof window !== "undefined" && (window as any).ethereum) {
+      const eth = (window as any).ethereum;
+      eth
+        .request({ method: "eth_accounts" })
+        .then((accounts: string[]) => {
+          if (accounts && accounts.length > 0) {
+            setAccount(accounts[0]);
             ensureCorrectChain().then(setChainOk);
           }
         })
         .catch(() => {});
+
+      const handleAccountsChanged = (accs: string[]) => {
+        setAccount(accs[0] || null);
+      };
+      const handleChainChanged = () => {
+        ensureCorrectChain().then(setChainOk);
+      };
+
+      eth.on("accountsChanged", handleAccountsChanged);
+      eth.on("chainChanged", handleChainChanged);
+
+      return () => {
+        if (eth.removeListener) {
+          eth.removeListener("accountsChanged", handleAccountsChanged);
+          eth.removeListener("chainChanged", handleChainChanged);
+        }
+      };
     }
   }, []);
 
@@ -135,7 +127,7 @@ export default function AdminPage() {
     setStatusMsg(null);
     const addr = await connectMetaMask();
     if (!addr) {
-      setStatusMsg({ type: "error", text: "MetaMask connection was rejected or unavailable." });
+      setStatusMsg({ type: "error", text: "MetaMask connection was rejected or provider not found." });
       return;
     }
     const ok = await ensureCorrectChain();
@@ -143,320 +135,322 @@ export default function AdminPage() {
     setChainOk(ok);
   }
 
-  const effectiveOwner = contractOwner || chainInfo?.owner || "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1";
-  const isOwnerConnected =
-    Boolean(account && effectiveOwner && account.toLowerCase() === effectiveOwner.toLowerCase());
-
-  async function handleWhitelist(mfrToWhitelist: string = targetAddress) {
-    if (!contractAddress) {
-      setStatusMsg({ type: "error", text: "Contract address is not set." });
-      return;
-    }
-    if (!account) {
-      setStatusMsg({ type: "error", text: "Please connect MetaMask first." });
-      return;
-    }
-    if (!isOwnerConnected) {
-      setStatusMsg({
-        type: "error",
-        text: `Only the Contract Owner (${contractOwner}) can whitelist manufacturers. Your connected account is ${account}.`,
-      });
-      return;
-    }
-
+  async function handleWhitelist() {
+    if (!contractAddress || !targetAddress) return;
     setBusy(true);
-    setStatusMsg({ type: "info", text: `Submitting on-chain transaction via MetaMask to whitelist ${mfrToWhitelist}...` });
+    setStatusMsg({ type: "info", text: "Requesting signature in MetaMask..." });
 
     try {
-      const { txHash, blockNumber } = await whitelistManufacturer(contractAddress, mfrToWhitelist);
+      const tx = await whitelistManufacturer(contractAddress, targetAddress);
       setStatusMsg({
         type: "success",
-        text: `Successfully whitelisted ${mfrToWhitelist} in block #${blockNumber}!`,
-        txHash,
+        text: `Manufacturer ${targetAddress.slice(0, 8)}... successfully whitelisted on-chain!`,
+        txHash: tx.txHash,
       });
-      await refreshTargetStatus(mfrToWhitelist);
+      await refreshTargetStatus(targetAddress);
     } catch (err: any) {
       const reason = err?.reason || err?.message || String(err);
-      setStatusMsg({ type: "error", text: `Transaction failed: ${reason}` });
+      setStatusMsg({
+        type: "error",
+        text: `Transaction failed: ${reason.includes("user rejected") ? "User rejected signature in MetaMask" : reason}`,
+      });
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleRevoke(mfrToRevoke: string = targetAddress) {
-    if (!contractAddress || !account) return;
-    if (!isOwnerConnected) {
-      setStatusMsg({
-        type: "error",
-        text: `Only the Contract Owner can revoke manufacturers.`,
-      });
-      return;
-    }
-
+  async function handleRevoke() {
+    if (!contractAddress || !targetAddress) return;
     setBusy(true);
-    setStatusMsg({ type: "info", text: `Submitting on-chain transaction via MetaMask to revoke ${mfrToRevoke}...` });
+    setStatusMsg({ type: "info", text: "Requesting signature in MetaMask..." });
 
     try {
-      const { txHash, blockNumber } = await revokeManufacturer(contractAddress, mfrToRevoke);
+      const tx = await revokeManufacturer(contractAddress, targetAddress);
       setStatusMsg({
         type: "success",
-        text: `Successfully revoked ${mfrToRevoke} in block #${blockNumber}!`,
-        txHash,
+        text: `Manufacturer ${targetAddress.slice(0, 8)}... authorization revoked!`,
+        txHash: tx.txHash,
       });
-      await refreshTargetStatus(mfrToRevoke);
+      await refreshTargetStatus(targetAddress);
     } catch (err: any) {
       const reason = err?.reason || err?.message || String(err);
-      setStatusMsg({ type: "error", text: `Transaction failed: ${reason}` });
+      setStatusMsg({
+        type: "error",
+        text: `Transaction failed: ${reason.includes("user rejected") ? "User rejected signature in MetaMask" : reason}`,
+      });
     } finally {
       setBusy(false);
     }
   }
+
+  const isOwner =
+    account && contractOwner && account.toLowerCase() === contractOwner.toLowerCase();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#26384B] pb-5">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <span>🛡️</span> Smart Contract Administration
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-[#00BFFF]/10 border border-[#00BFFF]/30 text-[#00BFFF] text-[11px] font-mono mb-2">
+            STARK // SMART CONTRACT GOVERNANCE
+          </div>
+          <h1 className="text-2xl font-bold text-[#F1F6FC] tracking-tight">
+            Smart Contract Administration
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Authorize and manage manufacturer accounts on the ProductRegistry contract using MetaMask.
+          <p className="text-xs text-[#9BAFC5] mt-1">
+            Manage manufacturer whitelisting, review on-chain role privileges, and inspect ProductRegistry.sol contract state.
           </p>
         </div>
 
-        <div>
-          {!account ? (
+        {/* MetaMask Status Pill */}
+        <div className="shrink-0">
+          {account ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#111C29] border border-[#26384B]">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  chainOk ? "bg-[#10B981] shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-[#EF4444]"
+                }`}
+              />
+              <div className="text-right">
+                <p className="text-[10px] font-mono text-[#9BAFC5]">ADMIN WALLET</p>
+                <p className="font-mono text-xs text-[#F1F6FC]">
+                  {account.slice(0, 6)}...{account.slice(-4)}
+                </p>
+              </div>
+            </div>
+          ) : isMetaMaskAvailable() ? (
             <button
               onClick={handleConnect}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg shadow-sm flex items-center gap-2 transition"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#00BFFF]/10 to-[#168BFF]/20 hover:from-[#00BFFF]/20 hover:to-[#168BFF]/30 border border-[#00BFFF]/40 text-[#00BFFF] text-xs font-semibold tracking-wide transition-all shadow-sm"
             >
-              <img src="https://metamask.io/images/metamask-fox.svg" alt="MetaMask" className="w-5 h-5" />
-              Connect Owner Wallet
+              Connect MetaMask
             </button>
           ) : (
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-xs">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-              <span className="font-mono text-gray-700">
-                {account.slice(0, 8)}...{account.slice(-6)}
-              </span>
-              <button
-                onClick={handleConnect}
-                className="text-sky-600 hover:underline ml-1 font-medium"
-              >
-                Switch
-              </button>
-            </div>
+            <span className="text-xs font-mono text-[#5B708B] px-3 py-1.5 rounded-lg bg-[#111C29] border border-[#26384B]">
+              No Web3 Provider
+            </span>
           )}
         </div>
       </div>
 
-      {/* ── Status Banner / Alerts ── */}
-      {statusMsg && (
+      {/* ── Role Privilege Notice Banner ── */}
+      {account && (
         <div
-          className={`p-4 rounded-xl border text-sm flex flex-col gap-1 ${
-            statusMsg.type === "success"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : statusMsg.type === "error"
-              ? "bg-rose-50 border-rose-200 text-rose-800"
-              : "bg-sky-50 border-sky-200 text-sky-800"
+          className={`p-3.5 rounded-xl border text-xs flex items-center justify-between gap-3 ${
+            isOwner
+              ? "bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]"
+              : "bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B]"
           }`}
         >
-          <div className="font-semibold">{statusMsg.text}</div>
-          {statusMsg.txHash && (
-            <div className="font-mono text-xs text-gray-600 break-all">
-              Tx Hash: {statusMsg.txHash}
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm">{isOwner ? "👑" : "👁️"}</span>
+            <div>
+              <p className="font-semibold">
+                {isOwner
+                  ? "Contract Owner Authorization Active"
+                  : "Read-Only Observability Mode"}
+              </p>
+              <p className="text-[#9BAFC5] mt-0.5">
+                {isOwner
+                  ? "Connected with Account #0. You possess full permission to add/remove manufacturers."
+                  : "Connected account is not the contract owner. Whitelist write transactions require Account #0."}
+              </p>
             </div>
+          </div>
+
+          {!isOwner && (
+            <button
+              onClick={handleConnect}
+              className="text-xs px-3 py-1 rounded-lg bg-[#F59E0B]/20 border border-[#F59E0B]/40 hover:bg-[#F59E0B]/30 font-semibold text-[#F59E0B] whitespace-nowrap"
+            >
+              Switch Account
+            </button>
           )}
         </div>
       )}
 
-      {/* ── Owner Permission Advisory ── */}
-      {account && !isOwnerConnected && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm flex items-start gap-3">
-          <span className="text-xl">⚠️</span>
-          <div>
-            <div className="font-semibold">Connected account is not the Contract Owner</div>
-            <p className="mt-1 text-xs text-amber-800">
-              Your connected MetaMask account ({account}) cannot authorize manufacturers. Please switch your
-              MetaMask account to <strong>Account #0</strong> ({contractOwner || "0x90F8bf6A..."}) to send
-              whitelisting transactions.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Contract Overview Card ── */}
-      <Card title="Contract Status & Configuration">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">ProductRegistry Address</label>
-            <div className="font-mono text-xs bg-gray-50 p-2.5 rounded border border-gray-200 mt-1 break-all text-gray-800 font-semibold">
-              {contractAddress || "Loading..."}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Connected Network</label>
-            <div className="flex items-center gap-2 mt-1 p-2 bg-gray-50 rounded border border-gray-200">
-              <span className={`w-2.5 h-2.5 rounded-full ${chainOk ? "bg-emerald-500" : "bg-amber-500"}`}></span>
-              <span className="text-xs font-medium text-gray-700">
-                {chainOk ? "Ganache Local (Chain ID 1337)" : "Check Network (Requires Chain ID 1337)"}
-              </span>
-              {!chainOk && (
-                <button
-                  onClick={ensureCorrectChain}
-                  className="ml-auto text-xs bg-sky-600 text-white px-2 py-0.5 rounded hover:bg-sky-700"
-                >
-                  Switch Network
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Contract Owner (Deployer)</label>
-            <div className="font-mono text-xs bg-gray-50 p-2 rounded border border-gray-200 mt-1 break-all text-gray-700">
-              {effectiveOwner || "Reading on-chain..."}
-              {isOwnerConnected && (
-                <span className="ml-2 text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
-                  YOU
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-medium text-gray-500 uppercase">Backend Operator</label>
-            <div className="font-mono text-xs bg-gray-50 p-2 rounded border border-gray-200 mt-1 break-all text-gray-700">
-              {contractOperator || "Reading on-chain..."}
-            </div>
-          </div>
+      {/* ── On-Chain Contract Parameters Card ── */}
+      <Card
+        title="Deployed Smart Contract Configuration"
+        subtitle="Live state read directly from Ganache local EVM (Chain ID 1337)"
+        icon={
+          <svg className="w-5 h-5 text-[#00BFFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        }
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <tbody>
+              <tr className="border-b border-[#26384B]/40">
+                <td className="py-2.5 text-[#9BAFC5]">ProductRegistry Contract Address</td>
+                <td className="py-2.5 text-right font-mono text-[#00BFFF] break-all">
+                  {contractAddress || "Loading..."}
+                </td>
+              </tr>
+              <tr className="border-b border-[#26384B]/40">
+                <td className="py-2.5 text-[#9BAFC5]">EVM Network & Chain ID</td>
+                <td className="py-2.5 text-right font-mono text-[#F1F6FC]">
+                  Ganache CLI (Chain ID 1337)
+                </td>
+              </tr>
+              <tr className="border-b border-[#26384B]/40">
+                <td className="py-2.5 text-[#9BAFC5]">Contract Deployer / Owner (`onlyOwner`)</td>
+                <td className="py-2.5 text-right font-mono text-[#F1F6FC] break-all">
+                  {contractOwner || "Loading..."}
+                </td>
+              </tr>
+              <tr className="border-b border-[#26384B]/40">
+                <td className="py-2.5 text-[#9BAFC5]">Backend Operator Account (`onlyOperator`)</td>
+                <td className="py-2.5 text-right font-mono text-[#F1F6FC] break-all">
+                  {contractOperator || "Loading..."}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </Card>
 
-      {/* ── Whitelist Management Card ── */}
-      <Card title="Whitelist Manufacturer">
+      {/* ── Manufacturer Whitelist Management Console ── */}
+      <Card
+        title="Manufacturer Whitelist Authorization Console"
+        subtitle="Authorize or revoke physical asset minting privileges on-chain"
+        icon={
+          <svg className="w-5 h-5 text-[#00BFFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        }
+      >
         <div className="space-y-4">
-          <p className="text-xs text-gray-500">
-            Whitelisting an Ethereum address grants it permission to sign and register new authentic products on-chain.
-          </p>
-
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Manufacturer Ethereum Address
-            </label>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-medium text-[#9BAFC5]">
+                Target Manufacturer Address
+              </label>
+              <button
+                type="button"
+                onClick={() => setTargetAddress("0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b")}
+                className="text-[11px] font-mono text-[#00BFFF] hover:underline"
+              >
+                Use Account #2 (Default in .env)
+              </button>
+            </div>
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={targetAddress}
                 onChange={(e) => setTargetAddress(e.target.value.trim())}
                 placeholder="0x..."
-                className="flex-1 font-mono text-sm px-3 py-2 border rounded-lg focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                className="flex-1 rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF]"
               />
               <button
                 type="button"
-                onClick={() => setTargetAddress("0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b")}
-                className="text-xs px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium whitespace-nowrap"
-                title="Paste Ganache Account #2 (Default configured in .env)"
+                onClick={() => refreshTargetStatus(targetAddress)}
+                disabled={checkingStatus}
+                className="px-3.5 py-2 rounded-lg bg-[#172536] hover:bg-[#172536]/80 border border-[#26384B] text-xs font-semibold text-[#9BAFC5] hover:text-[#F1F6FC] transition-colors"
               >
-                Use Account #2 (Default)
+                {checkingStatus ? "Checking..." : "Verify Status"}
               </button>
             </div>
           </div>
 
-          {/* Real-time status display */}
-          <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs">
-            <span className="font-medium text-gray-600">Current On-Chain Status:</span>
+          {/* Live Whitelist Status Indicator */}
+          <div className="p-3 rounded-xl bg-[#080D14] border border-[#26384B] flex items-center justify-between">
+            <span className="text-xs text-[#9BAFC5]">On-Chain Whitelist Status:</span>
             {checkingStatus ? (
-              <span className="text-gray-400">Querying chain...</span>
+              <span className="text-xs font-mono text-[#9BAFC5]">Querying ledger...</span>
             ) : targetIsWhitelisted === true ? (
-              <span className="text-emerald-700 font-bold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Whitelisted Manufacturer
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] font-mono text-xs font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                WHITELISTED AUTHORIZED
               </span>
             ) : targetIsWhitelisted === false ? (
-              <span className="text-rose-700 font-semibold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> Not Whitelisted
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] font-mono text-xs font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
+                NOT WHITELISTED
               </span>
             ) : (
-              <span className="text-gray-400">Connect wallet to inspect</span>
+              <span className="text-xs font-mono text-[#5B708B]">Unknown</span>
             )}
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap gap-3 pt-2">
+          {/* Action Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <button
-              onClick={() => handleWhitelist(targetAddress)}
-              disabled={busy || !isOwnerConnected || targetIsWhitelisted === true}
-              className={`px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm flex items-center gap-2 transition ${
-                busy || !isOwnerConnected || targetIsWhitelisted === true
-                  ? "bg-gray-300 cursor-not-allowed text-gray-500"
-                  : "bg-sky-600 hover:bg-sky-700"
-              }`}
+              type="button"
+              onClick={handleWhitelist}
+              disabled={busy || !isOwner}
+              className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-95 text-white font-semibold text-xs tracking-wide shadow-md transition-all disabled:opacity-40 flex items-center justify-center gap-2"
             >
-              {busy ? "Confirming in MetaMask..." : "✨ Whitelist via MetaMask"}
+              <span>✨</span>
+              <span>Whitelist via MetaMask (addManufacturer)</span>
             </button>
 
             <button
-              onClick={() => handleRevoke(targetAddress)}
-              disabled={busy || !isOwnerConnected || targetIsWhitelisted !== true}
-              className={`px-4 py-2.5 rounded-lg text-sm font-medium border transition ${
-                busy || !isOwnerConnected || targetIsWhitelisted !== true
-                  ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                  : "border-rose-200 text-rose-600 hover:bg-rose-50"
-              }`}
+              type="button"
+              onClick={handleRevoke}
+              disabled={busy || !isOwner}
+              className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#EF4444] to-[#B91C1C] hover:opacity-95 text-white font-semibold text-xs tracking-wide shadow-md transition-all disabled:opacity-40 flex items-center justify-center gap-2"
             >
-              Revoke Whitelist
+              <span>🚫</span>
+              <span>Revoke Authorization (removeManufacturer)</span>
             </button>
           </div>
+
+          {/* Transaction Feedback Notification */}
+          {statusMsg && (
+            <div
+              className={`p-3.5 rounded-xl border text-xs leading-relaxed ${
+                statusMsg.type === "success"
+                  ? "bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]"
+                  : statusMsg.type === "error"
+                  ? "bg-[#EF4444]/10 border-[#EF4444]/30 text-[#EF4444]"
+                  : "bg-[#00BFFF]/10 border-[#00BFFF]/30 text-[#00BFFF]"
+              }`}
+            >
+              <p className="font-semibold">{statusMsg.text}</p>
+              {statusMsg.txHash && (
+                <p className="font-mono mt-1 text-[11px] opacity-90 break-all">
+                  Tx Hash: {statusMsg.txHash}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </Card>
 
-      {/* ── Quick Ganache Accounts Reference Table ── */}
-      <Card title="Ganache Deterministic Accounts Reference">
-        <p className="text-xs text-gray-500 mb-3">
-          On local Ganache (deterministic), these accounts are created with fixed keys every restart. Use this table
-          to whitelist any manufacturer account with a single click.
-        </p>
-
+      {/* ── Deterministic Accounts Reference Table ── */}
+      <Card
+        title="Deterministic Ganache Account Directory"
+        subtitle="Pre-configured local testnet accounts for development and pair-programming"
+      >
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border border-gray-100 rounded-lg">
+          <table className="w-full text-xs">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 uppercase">
-                <th className="py-2.5 px-3">Account</th>
-                <th className="py-2.5 px-3">Designated Role</th>
-                <th className="py-2.5 px-3">Address</th>
-                <th className="py-2.5 px-3 text-right">Action</th>
+              <tr className="text-left text-[#9BAFC5] border-b border-[#26384B] font-mono text-[11px]">
+                <th className="pb-2 pr-3">Idx</th>
+                <th className="pb-2 pr-3">Assigned Role</th>
+                <th className="pb-2 pr-3">Ethereum Address</th>
+                <th className="pb-2 text-right">Quick Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody>
               {DETERMINISTIC_ACCOUNTS.map((acc) => (
-                <tr key={acc.index} className="hover:bg-gray-50">
-                  <td className="py-2.5 px-3 font-semibold text-gray-700">#{acc.index}</td>
-                  <td className="py-2.5 px-3 font-medium text-gray-600">
-                    {acc.role}
-                    {acc.index === 0 && (
-                      <span className="ml-1 text-[10px] bg-sky-100 text-sky-800 font-bold px-1 py-0.5 rounded">
-                        Admin
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-2.5 px-3 font-mono text-gray-700">{acc.address}</td>
-                  <td className="py-2.5 px-3 text-right">
-                    {acc.index >= 2 ? (
-                      <button
-                        onClick={() => {
-                          setTargetAddress(acc.address);
-                          handleWhitelist(acc.address);
-                        }}
-                        disabled={busy || !isOwnerConnected}
-                        className="text-xs font-medium text-sky-600 hover:text-sky-800 disabled:text-gray-300 hover:underline"
-                      >
-                        Whitelist
-                      </button>
-                    ) : (
-                      <span className="text-gray-400 text-[11px]">—</span>
-                    )}
+                <tr
+                  key={acc.index}
+                  className="border-b border-[#26384B]/40 last:border-0 hover:bg-[#172536]/30 transition-colors"
+                >
+                  <td className="py-2.5 pr-3 font-mono text-[#00BFFF]">#{acc.index}</td>
+                  <td className="py-2.5 pr-3 font-medium text-[#F1F6FC]">{acc.role}</td>
+                  <td className="py-2.5 pr-3 font-mono text-[#9BAFC5]">{acc.address}</td>
+                  <td className="py-2.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => setTargetAddress(acc.address)}
+                      className="text-[11px] font-mono text-[#00BFFF] hover:underline"
+                    >
+                      Select Target
+                    </button>
                   </td>
                 </tr>
               ))}

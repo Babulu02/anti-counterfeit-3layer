@@ -9,10 +9,11 @@ qrcode[pil]==7.4.2
 pycryptodome==3.20.0
 Pillow==10.3.0
 
-# ── Database (MySQL 9 via PyMySQL) ───────────────────────────────────────────
+# ── Database (MySQL 9 locally via PyMySQL, PostgreSQL on Render/Cloud) ──────
 # cryptography is required by PyMySQL when connecting to MySQL 9 (caching_sha2_password)
 pymysql==1.1.1
 cryptography==43.0.3
+psycopg2-binary>=2.9.9
 SQLAlchemy==2.0.30
 alembic==1.13.2
 

@@ -117,12 +117,12 @@ Full pipeline latency evaluated through `POST /scan` (including cryptographic ch
 
 | Metric | Latency |
 |:---|:---:|
-| **Median** | 161.13 ms |
-| **P95** | 201.4 ms |
-| **Mean** | 163.99 ms |
-| **Std** | 19.29 ms |
-| **Min** | 131.75 ms |
-| **Max** | 304.62 ms |
+| **Median** | 247.45 ms |
+| **P95** | 287.45 ms |
+| **Mean** | 245.9 ms |
+| **Std** | 25.48 ms |
+| **Min** | 191.0 ms |
+| **Max** | 339.82 ms |
 | **Requests_count** | 200 requests |
 
 ---

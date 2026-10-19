@@ -151,3 +151,13 @@ def get_scan_history(db: Session, product_id: str) -> list[dict]:
         }
         for r in rows
     ]
+
+
+def list_recent_scans(db: Session, limit: int = 100) -> list[Scan]:
+    """Return the most recent scans across all products for dashboard telemetry."""
+    return list(db.scalars(
+        select(Scan)
+        .order_by(Scan.ts.desc())
+        .limit(limit)
+    ))
+

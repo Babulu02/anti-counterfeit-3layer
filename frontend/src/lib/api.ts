@@ -151,3 +151,9 @@ export async function getChainInfo(): Promise<ChainInfo> {
   return req<ChainInfo>("GET", "/chain/info");
 }
 
+/** GET /scans/recent */
+export async function getRecentScans(limit: number = 100): Promise<ScanOut[]> {
+  return req<ScanOut[]>("GET", `/scans/recent?limit=${limit}`);
+}
+
+

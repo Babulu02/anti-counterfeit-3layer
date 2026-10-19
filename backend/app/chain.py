@@ -79,13 +79,23 @@ def _send_tx(w3: Web3, account: Any, fn_call) -> dict:
 
 
 def build_scan_hash(product_id: str, channel: str, device_hash: str,
-                    lat: float | None, lon: float | None, ts: str) -> bytes:
+                    lat: float | None, lon: float | None, ts: str,
+                    salt: bytes | str | None = None) -> bytes:
     """
-    Compute a privacy-preserving 32-byte hash to log on-chain.
-    Raw coordinates and device IDs never touch the blockchain.
+    Compute a privacy-preserving 32-byte salted hash to log on-chain.
+    Raw coordinates and device IDs never touch the blockchain in plaintext.
+    A server-side secret salt prevents dictionary and rainbow-table attacks
+    against coarse geographic coordinates and timestamps.
     """
-    raw = f"{product_id}|{channel}|{device_hash or ''}|{lat or ''}|{lon or ''}|{ts}"
+    if salt is None:
+        try:
+            salt = get_settings().identity_hmac_secret
+        except Exception:
+            salt = b"anti-counterfeit-salt-fallback"
+    salt_str = salt.hex() if isinstance(salt, bytes) else str(salt)
+    raw = f"{salt_str}|{product_id}|{channel}|{device_hash or ''}|{lat or ''}|{lon or ''}|{ts}"
     return hashlib.sha256(raw.encode()).digest()
+
 
 
 # ── Read functions ─────────────────────────────────────────────────────────────

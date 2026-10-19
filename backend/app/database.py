@@ -17,9 +17,13 @@ from .config import get_settings
 
 settings = get_settings()
 
+_db_url_str = str(settings.db_url())
+_connect_args = {"check_same_thread": False} if "sqlite" in _db_url_str else {}
+
 # Echo=False in production; set to True locally to see SQL
 engine = create_engine(
     settings.db_url(),
+    connect_args=_connect_args,
     pool_pre_ping=True,   # detect stale connections
     pool_recycle=3600,    # recycle connections after 1 h
     echo=False,

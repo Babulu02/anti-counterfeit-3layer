@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: anti-counterfeit-api
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: anti-counterfeit-db
+          property: connectionString
+      - key: RPC_URL
+        value: "https://rpc-amoy.polygon.technology"
+      - key: CONTRACT_ADDRESS
+        sync: false
+      - key: OPERATOR_PRIVATE_KEY
+        sync: false
+      - key: OWNER_PRIVATE_KEY
+        sync: false
+      - key: MANUFACTURER_PRIVATE_KEY
+        sync: false
+      - key: IDENTITY_HMAC_SECRET
+        generateValue: true
+      - key: NFC_MASTER_KEY
+        generateValue: true
+
+databases:
+  - name: anti-counterfeit-db
+    databaseName: anticounterfeit
+    user: anticounterfeit_user
+    plan: free
