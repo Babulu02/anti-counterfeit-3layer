@@ -104,9 +104,25 @@ def _make_row(product_id: str, ts: datetime, city: tuple[str, float, float],
 
 # ── Genuine Journey Simulator ────────────────────────────────────────────────
 
+def _advance_counter(rng: random.Random, current_ctr: int) -> int:
+    """Simulate realistic NFC counter increment with occasional missed taps."""
+    if current_ctr == 0:
+        return 1
+    # 20% chance of 1-2 missed taps during normal handling
+    if rng.random() < 0.20:
+        return current_ctr + rng.randint(2, 3)
+    return current_ctr + 1
+
+
 def _genuine_journey(rng: random.Random, product_id: str, start_ts: datetime, start_city: tuple[str, float, float]) -> list[dict]:
     """
-    Return scan rows for one genuine product journey with realistic human & retail variability.
+    Return scan rows for one genuine product journey with realistic human, retail,
+    household, and secondary market variability.
+    Spans lengths from 4 to 45+ scans across 4 realistic archetypes:
+      1. Minimal consumer (~30%): standard 4-8 scans.
+      2. Household / family (~35%): multiple members, 10-22 scans.
+      3. Retail store clerk audits (~20%): repeated inventory scans, 14-30 scans.
+      4. Resale / secondary market (~15%): peer-to-peer / appraisal, 24-48 scans.
     """
     rows = []
     ts = start_ts
@@ -118,7 +134,7 @@ def _genuine_journey(rng: random.Random, product_id: str, start_ts: datetime, st
     mfr_dev = f"dev-mfr-{rng.randint(100, 999)}"
     dist_dev = f"dev-dist-{rng.randint(100, 999)}"
     retail_dev = f"dev-ret-{rng.randint(100, 999)}"
-    clerks = [retail_dev, f"dev-ret-{rng.randint(100, 999)}"]
+    clerks = [retail_dev, f"dev-ret-{rng.randint(100, 999)}", f"dev-ret-{rng.randint(100, 999)}"]
 
     hops = [
         ("manufacturer", mfr_dev, 0),
@@ -128,63 +144,77 @@ def _genuine_journey(rng: random.Random, product_id: str, start_ts: datetime, st
 
     for role, dev, hours_gap in hops:
         ts += timedelta(hours=hours_gap)
-        # Advance counter (maybe missed tap)
-        if rng.random() < 0.20 and nfc_counter > 0:
-            nfc_counter += rng.randint(2, 3)
-        else:
-            nfc_counter += 1
-
+        nfc_counter = _advance_counter(rng, nfc_counter)
         ch = rng.choice(["qr", "nfc"])
         rows.append(_make_row(product_id, ts, city, dev, ch, nfc_counter, sold, 0, "", rng))
 
+        if role == "distributor" and rng.random() < 0.40:
+            # Distributor warehouse intake / pallet scan
+            extra_dist = rng.randint(1, 3)
+            for _ in range(extra_dist):
+                ts += timedelta(minutes=rng.randint(5, 30))
+                rows.append(_make_row(product_id, ts, city, dist_dev, "qr", nfc_counter, sold, 0, "", rng))
+
         if role == "retailer":
             sold = True
-            # Genuine retail inventory intake variability: retailer scans 2-5 items rapidly
-            if rng.random() < 0.35:
-                extra_intake = rng.randint(1, 4)
-                intake_ts = ts
+            # Initial retail intake
+            if rng.random() < 0.50:
+                extra_intake = rng.randint(1, 3)
                 for _ in range(extra_intake):
-                    intake_ts += timedelta(minutes=rng.randint(3, 12))
-                    intake_dev = rng.choice(clerks)
-                    rows.append(_make_row(product_id, intake_ts, city, intake_dev, "qr", nfc_counter, sold, 0, "", rng))
-                ts = intake_ts
+                    ts += timedelta(minutes=rng.randint(3, 15))
+                    rows.append(_make_row(product_id, ts, city, rng.choice(clerks), "qr", nfc_counter, sold, 0, "", rng))
 
-        # Next hop moves within plausible commercial freight distance (100 - 2500 km)
+        # Plausible freight transition between cities
         candidates = [c for c in CITIES if 80 < _haversine(city[1], city[2], c[1], c[2]) < 2500]
         if candidates:
             city = rng.choice(candidates)
 
-    # 2. Consumer scans (1 to 4 scans)
-    n_consumer = rng.randint(1, 4)
-    consumer_devices = [f"dev-usr-{rng.randint(10000, 99999)}"]
-    # Shared device scenario (spouse/friend also scans)
-    if rng.random() < 0.30:
-        consumer_devices.append(f"dev-usr-{rng.randint(10000, 99999)}")
+    # 2. Archetype selection for post-retail journey
+    archetype_roll = rng.random()
 
-    for _ in range(n_consumer):
-        c_dev = rng.choice(consumer_devices)
-        hours_to_next = rng.randint(2, 72)
-        ts += timedelta(hours=hours_to_next)
+    if archetype_roll < 0.30:
+        # Archetype 1: Minimal consumer (1-4 consumer scans) -> total ~4-8
+        n_scans = rng.randint(1, 4)
+        consumer_devs = [f"dev-usr-{rng.randint(10000, 99999)}"]
+    elif archetype_roll < 0.65:
+        # Archetype 2: Household / family (6-16 consumer scans) -> total ~10-22
+        n_scans = rng.randint(6, 16)
+        consumer_devs = [f"dev-usr-{rng.randint(10000, 99999)}" for _ in range(rng.randint(2, 3))]
+    elif archetype_roll < 0.85:
+        # Archetype 3: Retail store audits & clerk display checks (10-24 scans) -> total ~14-30
+        n_scans = rng.randint(10, 24)
+        consumer_devs = clerks + [f"dev-usr-{rng.randint(10000, 99999)}"]
+    else:
+        # Archetype 4: Resale / secondary market transfer (18-38 scans) -> total ~24-48
+        n_scans = rng.randint(18, 38)
+        consumer_devs = [
+            f"dev-usr-{rng.randint(10000, 99999)}",
+            f"dev-pawn-{rng.randint(10000, 99999)}",
+            f"dev-appr-{rng.randint(10000, 99999)}",
+            f"dev-buyer-{rng.randint(10000, 99999)}",
+        ]
 
-        # Genuine customer travel (15% chance of flight/inter-city travel)
-        if rng.random() < 0.15:
-            travel_candidates = [c for c in CITIES if 300 < _haversine(city[1], city[2], c[1], c[2]) < 6000]
+    for _ in range(n_scans):
+        dev = rng.choice(consumer_devs)
+        # Normal spacing: minutes (if repeated check) or hours/days
+        if rng.random() < 0.25:
+            ts += timedelta(minutes=rng.randint(2, 45))
+        else:
+            ts += timedelta(hours=rng.randint(2, 96))
+
+        # Genuine travel (flight or train, plausible physical speed)
+        if rng.random() < 0.12:
+            travel_candidates = [c for c in CITIES if 200 < _haversine(city[1], city[2], c[1], c[2]) < 5000]
             if travel_candidates:
                 dest = rng.choice(travel_candidates)
                 dist = _haversine(city[1], city[2], dest[1], dest[2])
-                # Speed 250 - 750 km/h (domestic / international flight)
                 flight_hours = max(2.0, dist / rng.uniform(300.0, 750.0))
                 ts += timedelta(hours=flight_hours)
                 city = dest
 
-        # Occasional missed tap (counter gap)
-        if rng.random() < 0.22:
-            nfc_counter += rng.randint(2, 4)
-        else:
-            nfc_counter += 1
-
+        nfc_counter = _advance_counter(rng, nfc_counter)
         ch = rng.choice(["qr", "nfc"])
-        rows.append(_make_row(product_id, ts, city, c_dev, ch, nfc_counter, sold, 0, "", rng))
+        rows.append(_make_row(product_id, ts, city, dev, ch, nfc_counter, sold, 0, "", rng))
 
     return rows
 
