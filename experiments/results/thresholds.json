@@ -1,7 +1,7 @@
 {
-  "random_forest": 0.23,
-  "isolation_forest": 0.5892205181896621,
-  "rule_speed_kmh": 500.0,
+  "random_forest": 0.75,
+  "isolation_forest": 0.5935392504103743,
+  "rule_speed_kmh": 750.0,
   "rule_burst_1h": 3,
   "rule_gap_thresh": 8
 }
