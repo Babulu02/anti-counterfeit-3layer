@@ -74,7 +74,7 @@ To eliminate bias, thresholds must be selected symmetrically on the validation s
    *Guarantee:* Only 5% of impostor pairs exceed this threshold. Any pair with $S_C \ge 0.5100$ can be classified as authentic with bounded false acceptance risk ($\le 5\%$).
 3. **Calibrated Abstain Band:**  
    $$[0.2402, 0.5100]$$  
-   Pairs falling inside this band are flagged as `uncertain` and mapped by Rule 9 of [`backend/app/fusion.py`](file:///C:/Blockchain/anti-counterfeit-3layer/backend/app/fusion.py#L166) to `Manual review`.
+   Pairs falling inside this band are classified as `uncertain` (confidence $0.0$). In [`backend/app/fusion.py`](file:///C:/Blockchain/anti-counterfeit-3layer/backend/app/fusion.py#L166), Rule 9 triggers `Manual review` **strictly** when `image_result == "counterfeit"` ($S_C \le 0.2402$). An `uncertain` result abstains and is ignored, preserving `Verified` if on-chain and cryptographic identity checks pass.
 4. **Single-Threshold Operating Point (No Abstention):**  
    $$\tau_{opt} = \mathbf{0.2402}$$  
    At this single operating point, all items with $S_C \ge 0.2402$ are called genuine, and all items below are called counterfeit.

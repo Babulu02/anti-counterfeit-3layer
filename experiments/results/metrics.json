@@ -1,5 +1,9 @@
 {
   "note": "ALL DATA IS SIMULATED. 5 seeds evaluated.",
+  "total_scans": 37312,
+  "unique_products": 2000,
+  "genuine_scans": 33926,
+  "attack_scans": 3386,
   "seeds": [
     42,
     7,
