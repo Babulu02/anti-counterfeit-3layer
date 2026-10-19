@@ -137,3 +137,17 @@ export async function getScans(id: string): Promise<ScanOut[]> {
 export async function getHealth(): Promise<{ status: string; db: string; chain: string; contract: string }> {
   return req("GET", "/health");
 }
+
+export interface ChainInfo {
+  contract_address: string;
+  rpc_url:          string;
+  chain_id:         number;
+  owner:            string | null;
+  operator:         string | null;
+}
+
+/** GET /chain/info */
+export async function getChainInfo(): Promise<ChainInfo> {
+  return req<ChainInfo>("GET", "/chain/info");
+}
+

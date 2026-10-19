@@ -3,6 +3,7 @@ import ManufacturerPage from "./pages/ManufacturerPage";
 import VerifyPage       from "./pages/VerifyPage";
 import DashboardPage    from "./pages/DashboardPage";
 import DemoPage         from "./pages/DemoPage";
+import AdminPage        from "./pages/AdminPage";
 
 /** Top-level nav link — bold/blue when active. */
 function NavLink({ to, label }: { to: string; label: string }) {
@@ -35,6 +36,7 @@ export default function App() {
           <NavLink to="/verify"       label="Verify" />
           <NavLink to="/dashboard"    label="Dashboard" />
           <NavLink to="/demo"         label="Demo" />
+          <NavLink to="/admin"        label="Admin" />
         </nav>
       </header>
 
@@ -46,6 +48,7 @@ export default function App() {
           <Route path="/verify"       element={<VerifyPage />} />
           <Route path="/dashboard"    element={<DashboardPage />} />
           <Route path="/demo"         element={<DemoPage />} />
+          <Route path="/admin"        element={<AdminPage />} />
         </Routes>
       </main>
 

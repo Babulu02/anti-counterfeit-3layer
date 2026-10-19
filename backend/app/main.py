@@ -205,6 +205,28 @@ def health(db: Session = Depends(get_db)):
     )
 
 
+@app.get("/chain/info", tags=["infra"])
+def chain_info():
+    """Return public chain configuration for frontend and MetaMask interactions."""
+    owner = None
+    operator = None
+    try:
+        c = get_contract()
+        owner = c.functions.owner().call()
+        operator = c.functions.operator().call()
+    except Exception:
+        pass
+
+    return {
+        "contract_address": settings.contract_address,
+        "rpc_url": settings.rpc_url,
+        "chain_id": 1337,
+        "owner": owner,
+        "operator": operator,
+    }
+
+
+
 @app.post("/products", response_model=ProductRegisterResponse,
           status_code=status.HTTP_201_CREATED, tags=["products"])
 def register_product(
