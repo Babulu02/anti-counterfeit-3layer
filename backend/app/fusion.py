@@ -67,7 +67,11 @@ class Signals:
     # ML (Layer 2 / Phase 4)
     risk_score:   Optional[float]  # [0,1] or None
     # Contextual
+    # Context
     is_new_location: bool = False  # scan location never seen for this product
+    # Image signal (Phase 8 - optional 4th signal)
+    image_similarity: Optional[float] = None
+    image_result:     Optional[str]   = None  # "genuine" | "counterfeit" | "uncertain" | "absent"
 
 
 # ── Core fusion logic ─────────────────────────────────────────────────────────
@@ -87,7 +91,8 @@ def fuse(signals: Signals) -> tuple[str, str]:
     6. NFC counter disputed (replay / gap) → Manual review
     7. Already sold (any location) → Manual review
     8. Medium ML risk → Manual review
-    9. Everything else → Verified
+    9. Image visual mismatch (Phase 8 optional signal) → Manual review
+    10. Everything else → Verified
     """
     # Load thresholds lazily (tolerates missing model — returns defaults)
     low_thresh, high_thresh = _get_thresholds()
@@ -157,7 +162,15 @@ def fuse(signals: Signals) -> tuple[str, str]:
             f"Scan pattern is unusual but not conclusively malicious.",
         )
 
-    # ── Rule 9: all clear ────────────────────────────────────────────────────
+    # ── Rule 9: Image visual mismatch (Phase 8 optional signal) ──────────────
+    if signals.image_result == "counterfeit" and signals.image_similarity is not None:
+        return (
+            VERDICT_MANUAL,
+            f"Visual appearance mismatch (similarity={signals.image_similarity:.3f} below counterfeit threshold) — "
+            f"possible product swap or counterfeit packaging.",
+        )
+
+    # ── Rule 10: all clear ───────────────────────────────────────────────────
     return (
         VERDICT_VERIFIED,
         "Product is on-chain, identity check passed, and scan pattern is normal.",

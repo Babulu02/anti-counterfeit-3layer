@@ -61,18 +61,23 @@ class ScanRequest(BaseModel):
     lon:         Optional[float] = None
     device_id:   Optional[str]  = None    # hashed before storage
     timestamp:   Optional[datetime] = None
+    # Optional Image Signal (Phase 8)
+    image_bytes: Optional[str]  = None    # base64 encoded query image
 
 
 class ScanResponse(BaseModel):
-    verdict:         str
-    reason:          str
-    risk_score:      Optional[float]
-    chain_result:    str
-    identity_result: str
-    on_chain:        bool
-    sold:            bool
-    chain_tx:        Optional[str]   # logScan tx hash
-    product_id:      str
+    verdict:          str
+    reason:           str
+    risk_score:       Optional[float]
+    chain_result:     str
+    identity_result:  str
+    on_chain:         bool
+    sold:             bool
+    chain_tx:         Optional[str]   # logScan tx hash
+    product_id:       str
+    # Optional Image Signal (Phase 8)
+    image_result:     Optional[str]   = None  # "genuine", "counterfeit", "uncertain", "absent"
+    image_similarity: Optional[float] = None
 
 
 class ScanOut(BaseModel):

@@ -17,7 +17,7 @@ Device IDs are SHA-256 hashed before storage (see store_scan in crud.py).
 from datetime import datetime
 from sqlalchemy import (
     BigInteger, Boolean, DateTime, Enum, Float, Index,
-    Integer, String, Text, func,
+    Integer, LargeBinary, String, Text, func,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -53,6 +53,8 @@ class Product(Base):
                                                     comment="path under /data/product-images")
     image_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True,
                                                      comment="hex SHA-256 of the image file")
+    image_embedding: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True,
+                                                          comment="1280-d float32 L2-norm embedding bytes")
     record_hash: Mapped[str] = mapped_column(String(66), nullable=False,
                                               comment="bytes32 hex sent to registerProduct()")
     status:      Mapped[str] = mapped_column(

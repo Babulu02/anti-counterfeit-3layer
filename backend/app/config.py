@@ -52,6 +52,8 @@ class Settings:
                                         "experiments/results/rf_model.joblib")
     ml_thresholds_path: str = os.getenv("ML_THRESHOLDS_PATH",
                                         "experiments/results/thresholds.json")
+    sop_root:           str = os.getenv("SOP_ROOT",
+                                        "C:\\Project-MF\\Stanford_Online_Products")
 
     def db_url(self, db_name: str | None = None) -> URL:
         """Return a SQLAlchemy URL for the given database name (default: DB_NAME)."""

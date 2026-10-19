@@ -64,15 +64,26 @@ the manufacturer's private key if an attacker compromises the backend. In produc
 
 ---
 
-## L-006  Image-consistency signal (Phase 8) does not catch expert counterfeits
+## L-006  Image-consistency signal (Phase 8) catches product swaps, not expert counterfeits
 
-The MobileNetV2/EfficientNet-B0 embedding similarity check compares uploaded photos against
-the registered reference image. It can detect obvious product swaps (e.g. a different product
-in the same packaging). It does NOT detect:
+The MobileNetV2 feature extractor (1280-d unit-length embeddings) compares uploaded photos against
+the registered reference image using cosine similarity and Platt scaling. In evaluation on the
+Stanford Online Products (SOP) dataset (`Ebay_test.txt`, product-disjoint from training):
 
-- High-quality counterfeits with near-identical appearance to the genuine product.
-- Packaging counterfeits where only small details differ.
-- Any counterfeit where no photo is uploaded at scan time.
+- Overall ROC-AUC against all impostors: 0.9115
+- ROC-AUC against random impostors (different category): 0.9574
+- ROC-AUC against hard negatives (same superclass, different class): 0.8656
+- At 5% FRR operating point, FAR is 0.4747 (threshold = 0.2385)
+- Platt scaling reduces Expected Calibration Error (ECE) by 62.24% (from 0.1337 down to 0.0505)
+
+**Operational Scope:**
+- **What it catches:** Gross product swaps (e.g. counterfeit box containing a cheap substitute item),
+  wrong product category, and low-effort visually mismatched counterfeits.
+- **What it does NOT catch:** High-quality visual replicas, expert packaging counterfeits with identical
+  visual design, or microscopic alterations (e.g. fine stitching, micro-print defects).
+- **Graceful degradation:** If no photo is uploaded during a scan (`image_bytes` absent) or if similarity
+  falls in the ambiguous abstain zone (37.0% abstain rate), the signal is completely ignored,
+  preserving 100% functionality of the blockchain and NFC/QR identity layers.
 
 ---
 

@@ -113,8 +113,36 @@ def _compute_record_hash(name: str, brand: str, serial: str,
     return "0x" + hashlib.sha256(raw.encode()).hexdigest()
 
 
-def _save_image(upload: UploadFile) -> tuple[str, str]:
-    """Save uploaded image, return (relative_path, sha256_hex)."""
+import base64
+import numpy as np
+
+
+def _embed_image_safe(data: bytes) -> Optional[np.ndarray]:
+    """Safely extract MobileNetV2 embedding without crashing if dependencies fail."""
+    try:
+        from ml.image_signal.embedder import get_embedder
+        return get_embedder().embed_bytes(data)
+    except Exception:
+        return None
+
+
+def _classify_image_safe(query_bytes: bytes, ref_embedding_bytes: bytes) -> tuple[Optional[str], Optional[float]]:
+    """Safely compute cosine similarity and classify query vs reference embedding."""
+    try:
+        from ml.image_signal.embedder import get_embedder
+        from ml.image_signal.similarity import cosine_similarity, classify, load_calibrated_thresholds
+        query_emb = get_embedder().embed_bytes(query_bytes)
+        ref_emb = np.frombuffer(ref_embedding_bytes, dtype=np.float32)
+        sim = cosine_similarity(query_emb, ref_emb)
+        thr_gen, thr_cnt, _, _ = load_calibrated_thresholds()
+        label, _ = classify(sim, thr_gen, thr_cnt)
+        return label, round(float(sim), 4)
+    except Exception:
+        return None, None
+
+
+def _save_image(upload: UploadFile) -> tuple[str, str, Optional[bytes]]:
+    """Save uploaded image, return (relative_path, sha256_hex, embedding_bytes)."""
     # Read synchronously — works in both sync and async handlers
     content = upload.file.read()
     sha256  = hashlib.sha256(content).hexdigest()
@@ -122,7 +150,13 @@ def _save_image(upload: UploadFile) -> tuple[str, str]:
     fname   = sha256[:16] + ext
     fpath   = _IMAGES_DIR / fname
     fpath.write_bytes(content)
-    return str(fpath.relative_to(Path(_ROOT))), sha256
+
+    emb_bytes = None
+    emb = _embed_image_safe(content)
+    if emb is not None:
+        emb_bytes = emb.tobytes()
+
+    return str(fpath.relative_to(Path(_ROOT))), sha256, emb_bytes
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -182,9 +216,9 @@ def register_product(
     - Returns the QR payload string and NFC payload dict.
     """
     # Process image
-    image_path, image_sha256 = None, None
+    image_path, image_sha256, image_embedding = None, None, None
     if image and image.filename:
-        image_path, image_sha256 = _save_image(image)
+        image_path, image_sha256, image_embedding = _save_image(image)
 
     # Generate IDs and hashes
     product_id  = _make_product_id()
@@ -208,6 +242,7 @@ def register_product(
         serial=serial,
         image_path=image_path,
         image_sha256=image_sha256,
+        image_embedding=image_embedding,
         record_hash=record_hash,
         status="registered",
         manufacturer_address=manufacturer_address,
@@ -327,6 +362,20 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
     # ── 3b. New-location detection ───────────────────────────────────────────
     new_loc = is_new_location(product_id, req.lat, req.lon, prior_rows)
 
+    # ── 3c. Optional Image Signal (Phase 8) ──────────────────────────────────
+    image_result = None
+    image_sim = None
+    if req.image_bytes:
+        try:
+            q_bytes = base64.b64decode(req.image_bytes)
+            db_prod = get_product_by_pid(db, product_id)
+            if db_prod and db_prod.image_embedding:
+                image_result, image_sim = _classify_image_safe(q_bytes, db_prod.image_embedding)
+            else:
+                image_result = "absent"
+        except Exception:
+            image_result = "absent"
+
     # ── 4. Fusion verdict ────────────────────────────────────────────────────
     signals = Signals(
         on_chain         = on_chain,
@@ -336,6 +385,8 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
         identity_reason  = id_result["reason"],
         risk_score       = risk_score,
         is_new_location  = new_loc,
+        image_similarity = image_sim,
+        image_result     = image_result,
     )
     verdict, reason = fuse(signals)
 
@@ -366,15 +417,17 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
     )
 
     return ScanResponse(
-        verdict         = verdict,
-        reason          = reason,
-        risk_score      = risk_score,
-        chain_result    = chain_res,
-        identity_result = id_result["result"],
-        on_chain        = on_chain,
-        sold            = sold,
-        chain_tx        = chain_tx,
-        product_id      = product_id,
+        verdict          = verdict,
+        reason           = reason,
+        risk_score       = risk_score,
+        chain_result     = chain_res,
+        identity_result  = id_result["result"],
+        on_chain         = on_chain,
+        sold             = sold,
+        chain_tx         = chain_tx,
+        product_id       = product_id,
+        image_result     = image_result,
+        image_similarity = image_sim,
     )
 
 
