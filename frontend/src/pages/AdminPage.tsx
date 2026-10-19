@@ -116,6 +116,21 @@ export default function AdminPage() {
     };
   }, []);
 
+  // Check if MetaMask already has connected accounts on mount
+  useEffect(() => {
+    if (isMetaMaskAvailable()) {
+      const eth = (window as unknown as { ethereum: any }).ethereum;
+      eth.request?.({ method: "eth_accounts" })
+        .then((accs: string[]) => {
+          if (accs && accs[0]) {
+            setAccount(accs[0]);
+            ensureCorrectChain().then(setChainOk);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
   async function handleConnect() {
     setStatusMsg(null);
     const addr = await connectMetaMask();
@@ -128,8 +143,9 @@ export default function AdminPage() {
     setChainOk(ok);
   }
 
+  const effectiveOwner = contractOwner || chainInfo?.owner || "0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1";
   const isOwnerConnected =
-    account && contractOwner && account.toLowerCase() === contractOwner.toLowerCase();
+    Boolean(account && effectiveOwner && account.toLowerCase() === effectiveOwner.toLowerCase());
 
   async function handleWhitelist(mfrToWhitelist: string = targetAddress) {
     if (!contractAddress) {
@@ -301,8 +317,8 @@ export default function AdminPage() {
           <div>
             <label className="text-xs font-medium text-gray-500 uppercase">Contract Owner (Deployer)</label>
             <div className="font-mono text-xs bg-gray-50 p-2 rounded border border-gray-200 mt-1 break-all text-gray-700">
-              {contractOwner || "Reading on-chain..."}
-              {contractOwner && account && contractOwner.toLowerCase() === account.toLowerCase() && (
+              {effectiveOwner || "Reading on-chain..."}
+              {isOwnerConnected && (
                 <span className="ml-2 text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
                   YOU
                 </span>
