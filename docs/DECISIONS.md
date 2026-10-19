@@ -84,3 +84,58 @@ privacy record. See LIMITATIONS.md for further discussion.
 **Reason:** Splitting by row would leak future scans of the same product into training data,
 producing optimistic metrics that do not reflect real deployment. Splitting by product ensures
 the model has never seen any scan of a test product.
+
+---
+
+## D-009  MySQL with PyMySQL and least-privilege credentials
+
+**Decision:** The application runs exclusively against MySQL 9.x via `pymysql` and SQLAlchemy 2.0,
+using a dedicated restricted user `ac_user` with access only to `anticounterfeit` and `anticounterfeit_test`.
+The root account is never used.
+
+**Reason:** Prevents accidental privilege escalation, protects system tables, and enforces production database
+security hygiene in development.
+
+---
+
+## D-010  Fair rule baseline incorporates NFC counter freshness gap
+
+**Decision:** The rule baseline (`FairRuleBaseline`) checks both impossible travel velocity (> 900 km/h) and
+NFC counter delta gaps (counter jump > 5 or non-monotonic counter).
+
+**Reason:** Comparing an ML model against a strawman rule baseline that ignores the primary NFC security
+mechanism is scientifically dishonest. The fair baseline demonstrates the exact marginal value added by machine learning.
+
+---
+
+## D-011  Held-out attack variant (G_stealth_clone) for generalization testing
+
+**Decision:** Attack variant `G_stealth_clone` (slow clone matching plausible travel timing and counter pacing)
+is held out completely from the training set and evaluated only on test products.
+
+**Reason:** Tests whether ML models can detect novel or adaptive attack vectors rather than merely memorizing
+the generative distribution seen during training.
+
+---
+
+## D-012  MobileNetV2 image embedding as an optional fourth fusion signal
+
+**Decision:** Visual verification uses MobileNetV2 pretrained on ImageNet (1280-d unit-length embeddings)
+with cosine similarity and Platt scaling. The image signal is strictly optional: if no photo is submitted
+or if the score falls into the abstain band, the signal is completely ignored.
+
+**Reason:** Mobile devices frequently encounter adverse lighting, camera glare, or missing image uploads.
+Making the image signal optional prevents camera/lighting variability from causing false rejections of valid products.
+When a photo is provided and scores below the counterfeit threshold, it acts as a visual safety net catching gross
+product swaps.
+
+---
+
+## D-013  Binary blob storage for image feature vectors
+
+**Decision:** High-dimensional image embeddings (1280 float32 values) are stored in MySQL as binary blobs
+(`np.ndarray.tobytes()`), unpacked at verification time via `np.frombuffer`.
+
+**Reason:** Binary representation takes exactly 5,120 bytes per product (compared to > 15 KB for JSON floats)
+and avoids serialization/parsing overhead.
+

@@ -181,3 +181,18 @@ In the 5-seed evaluation on 2000 products (`data/scans.csv`, 16,213 scans), Rand
 - **Root Cause (Synthetic Sequence-Length Bias):** In the simulation, genuine journeys contain 4 to 8 lifetime hops (3 supply-chain hops + 1-4 consumer taps), whereas simulated attack sequences are appended onto genuine timelines, naturally elevating `total_scans` (reaching 8-25) and inflating `distinct_devices` beyond the typical consumer range.
 - In real-world physical retail deployments, genuine products scanned by large households, store clerks, or second-hand buyers could reach higher scan counts, diminishing the separation provided by `total_scans`. Real-world deployments must normalize running counters against product age or rely more heavily on orthogonal signals (such as NFC CMAC verification and impossible velocity).
 
+---
+
+## L-013  Frontend UI is only partly tested headlessly
+
+While the REST API and contract interactions have 129 automated tests and complete end-to-end live check coverage (`experiments/live_check.py`), the React frontend (`frontend/`) has only been verified headlessly and via Vite dev server builds. Browser-specific APIs require manual interactive testing:
+
+1. **Camera Barcode Stream (`html5-qrcode`):**
+   - Headless tests cannot grant camera permissions or stream video frames from a physical camera sensor to test QR code detection in real lighting.
+2. **Web NFC Hardware API (`NDEFReader`):**
+   - The Web NFC API (`window.NDEFReader`) is an experimental standard supported only on Android Chrome with physical NFC hardware. It cannot be triggered headlessly on desktop Windows.
+3. **MetaMask Wallet Extension Provider (`window.ethereum`):**
+   - The transaction confirmation popups, chain switching prompts, and EIP-712 / typed data signatures require an interactive browser extension with an unlocked account.
+4. **Visual Layout and Responsive Breakpoints:**
+   - Visual aesthetics, glassmorphism CSS, and responsive drawer animations should be visually inspected by opening `http://localhost:5173` in a desktop and mobile browser.
+
