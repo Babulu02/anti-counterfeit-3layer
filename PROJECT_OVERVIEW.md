@@ -1,454 +1,269 @@
-# Anti-Counterfeit 3-Layer: Complete Technical Reference & Agent System Guide
+# Anti-Counterfeiting Prototype: Comprehensive System Overview
 
-> **Document Purpose:** This document provides a complete, exhaustive reference of the entire repository. Any AI agent or developer reading this document will possess full context regarding the architecture, theory, cryptographic foundations, data schemas, smart contracts, ML models, frontend structure, operational runbook, and constraints of this project.
-
----
-
-## 1. Executive Summary & Research Motivation
-
-**Project Title:** Anti-Counterfeit 3-Layer Research Prototype  
-**Extension Target:** "A Holistic Anti-Counterfeiting Platform Using NFC and Blockchain" (HACP5, *CMC 2025*)
-
-### The Core Problem
-Traditional supply-chain anti-counterfeiting solutions rely either solely on static barcodes/QR codes (trivially photocopied), static NFC tags (susceptible to cloning and replay attacks), or centralized databases. HACP5 proposed combining physical NFC tags with Ethereum blockchain records. However, HACP5 possessed critical vulnerabilities:
-1. **Network Race Conditions:** HACP5 relied on updating an on-chain NFC counter during scanning. Under latency or network reordering, concurrent scans produced race conditions and false alarms.
-2. **Binary Verification:** HACP5 used brittle binary verification without probabilistic anomaly detection for physical clones operating in different geographic locations.
-3. **Absence of Visual Verification:** Packaging or label tampering without cloning electronics could not be detected.
-
-### Our Solution
-This repository implements a production-grade, 4-tier anti-counterfeit system:
-- **Tier 1 (Physical & Blockchain Identity):** Dual-channel verification combining an HMAC-SHA256 signed QR code with dynamic AES-128 CMAC rolling-counter NFC emulation (NXP NTAG 424 DNA SUN standard) verified against an Ethereum smart contract (`ProductRegistry.sol`).
-- **Tier 2 (Spatio-Temporal ML Anomaly Detection):** A behavioral feature extraction pipeline and calibrated ML model (RandomForest + IsolationForest vs FairRuleBaseline) detecting impossible travel velocities (Haversine), burst frequencies, device entropy, and NFC freshness gaps.
-- **Tier 3 (Multi-Signal Deterministic Fusion Engine):** A priority cascade combining cryptographic validity, on-chain state, ML risk scores, and visual confidence into one of four auditable verdicts: `Verified`, `ManualReview`, `Suspicious`, or `Unregistered`.
-- **Tier 4 (Visual Consistency Verification):** Transfer learning using MobileNetV2 (1280-d unit-length embeddings) calibrated with Platt scaling on the Stanford Online Products dataset, with an explicit abstain band to prevent false rejections.
+> **Document Note:** This document is generated programmatically by `experiments/make_overview.py`.
+> All metrics, counts, thresholds, package versions, and contract details are dynamically parsed from source files, test collectors, and experiment results artifacts.
+> **Status:** 129 backend pytest tests passing, 43 contract Truffle tests passing.
 
 ---
 
-## 2. System Architecture & Component Diagram
+## 1. Research Motivation & Theoretical Foundations
 
-```
-                              ┌────────────────────────────────────────────────────────┐
-                              │                    USER INTERFACES                     │
-                              │  React 18 + Vite + TailwindCSS + ethers.js (Port 5173) │
-                              └──────────────┬─────────────────────────┬───────────────┘
-                                             │                         │
-                   Direct MetaMask Signatures│                         │ REST API (/api/*)
-                   (Admin / Manufacturer)    │                         │
-                                             ▼                         ▼
-┌──────────────────────────────────────────────┐        ┌──────────────────────────────────────────────┐
-│         ETHEREUM / GANACHE BLOCKCHAIN        │        │           FASTAPI BACKEND SERVICE            │
-│           (Port 7546, NetID 1337)            │        │           (Port 8000, Python 3.11)           │
-├──────────────────────────────────────────────┤        ├──────────────────────────────────────────────┤
-│ Contract: ProductRegistry.sol                │        │ Routes: /products, /scan, /health, /chain    │
-│  - addManufacturer(address) [Owner only]     │◄───────┤ Web3.py v8 Client (EIP-1559 Transactions)    │
-│  - registerProduct(id, hash) [Mfr only]      │ (read) ├──────────────────────────────────────────────┤
-│  - markSold(id) [Operator only]              │        │ Cryptographic Verification:                  │
-│  - logScan(id, scanHash, verdict) [Operator] │        │  - QR: HMAC-SHA256 signature validation      │
-└──────────────────────────────────────────────┘        │  - NFC: AES-128 CMAC & counter freshness     │
-                                                        ├──────────────────────────────────────────────┤
-                                                        │ Tier 2: Spatio-Temporal ML Engine            │
-                                                        │  - Haversine velocity calculation            │
-                                                        │  - RandomForestClassifier (scikit-learn)     │
-                                                        ├──────────────────────────────────────────────┤
-                                                        │ Tier 3: Deterministic Fusion Engine          │
-                                                        │  - Maps 4 signals → Final Verdict            │
-                                                        ├──────────────────────────────────────────────┤
-                                                        │ Tier 4: MobileNetV2 Visual Consistency       │
-                                                        │  - 1280-d unit embeddings, Platt scaling     │
-                                                        └──────────────────────┬───────────────────────┘
-                                                                               │
-                                                                               ▼
-                                                        ┌──────────────────────────────────────────────┐
-                                                        │           RELATIONAL STORAGE (MySQL 9)       │
-                                                        │  User: ac_user (Credentials in .env)         │
-                                                        │  Databases: anticounterfeit,                 │
-                                                        │             anticounterfeit_test             │
-                                                        │  Tables: products, tags, scans               │
-                                                        └──────────────────────────────────────────────┘
-```
+### 1.1 Context and Shortcomings of Prior Art: HACP5
+This project builds directly upon the architecture presented in:
+*“A Holistic Anti-Counterfeiting Platform Using NFC and Blockchain”* (HACP5, *Computers, Materials & Continua*, CMC 2025).
+
+The original HACP5 paper combined physical NFC chips with an Ethereum smart contract. Under the HACP5 protocol, an on-chain counter or tag state is updated synchronously during product verification. However, rigorous security analysis reveals critical real-world vulnerabilities:
+
+1. **Clone-First Race Condition:** In HACP5, if an attacker skims a genuine tag's credentials and submits an on-chain transaction before the legitimate owner, the contract advances the registered tag state. When the legitimate consumer subsequently presents the genuine physical tag, HACP5 flags it as a duplicate or counterfeit, permanently locking out the authentic item.
+2. **Brittle Binary Verification:** HACP5 relies strictly on exact counter equality. It lacks spatio-temporal behavioral analysis, failing to detect parallel clones operating across distant geographical locations.
+3. **Network Latency & Front-Running:** Requiring on-chain write transactions during the consumer scan loop creates user friction and vulnerability to network reordering.
+
+### 1.2 Our Architectural Improvements
+To address these limitations, our research prototype introduces:
+- **Dual-Channel Cryptographic Identity:** Combines HMAC-SHA256 signed QR codes with dynamic AES-128 CMAC rolling counter emulation (matching the NXP NTAG 424 DNA SUN standard).
+- **Soft Dispute Handling (`ManualReview`):** Counter replays and gaps do not permanently invalidate tags. Instead, they enter a soft `ManualReview` state where genuine tags can recover on subsequent sequential taps.
+- **Spatio-Temporal ML Anomaly Detection:** An 8-feature behavioral model detecting impossible travel velocity (Haversine), burst frequency, and device entropy.
+- **Deterministic Multi-Signal Fusion:** A 10-rule priority cascade yielding auditable verdicts: `Verified`, `ManualReview`, `Suspicious activity`, and `Unregistered product`.
+- **Optional Auxiliary Visual Verification:** Transfer-learned MobileNetV2 1280-d embeddings calibrated with Platt scaling, incorporating an explicit abstain band to prevent false rejections.
 
 ---
 
-## 3. Technology Stack & Software Versions
+## 2. Technology Stack & Software Versions
 
-All dependencies are strictly pinned to avoid cross-platform discrepancies:
+The environment versions below were read directly from `backend/.venv` via `pip freeze` and local configuration:
 
 | Component | Technology | Version | Purpose |
 |---|---|---|---|
-| **OS Platform** | Windows 10/11 | 64-bit | Execution environment |
-| **Backend Runtime** | Python (CPython) | 3.11.9 | Core server, ML, and experiments (`backend/.venv`) |
-| **Backend Framework** | FastAPI | 0.115.6 | Async REST API service |
-| **ASGI Server** | Uvicorn | 0.34.0 | High-performance ASGI web server |
-| **Blockchain Client** | Web3.py | 8.0.0b1 | Python Ethereum RPC client |
-| **Database Engine** | MySQL Community Server | 9.x | Relational persistence |
-| **ORM & Migrations** | SQLAlchemy / Alembic | 2.0.36 / 1.14.0 | Database abstraction and migrations |
-| **Smart Contracts** | Solidity | 0.8.20 | EVM contract source code |
-| **Contract Toolchain**| Truffle Suite | 5.11.5 | Contract compilation and migrations |
-| **Local Blockchain** | Ganache CLI | 7.9.1 | Deterministic Ethereum RPC testnet |
-| **Frontend Runtime** | Node.js / npm | 24.20.0 / 11.19.0| Frontend tooling and dependencies |
-| **Frontend Framework**| React / TypeScript | 18.3.1 / 5.7.2 | User interface application |
-| **Build Tool** | Vite | 6.0.3 | Fast dev server and frontend bundler |
-| **Web3 Frontend Lib** | ethers.js | 6.13.4 | In-browser MetaMask contract interaction |
-| **Styling** | Tailwind CSS | 3.4.16 | Utility-first responsive design |
-| **ML Frameworks** | scikit-learn / PyTorch | 1.6.0 / 2.5.1 | Behavioral and visual classification |
+| **Python Environment** | Python | 3.11.9 (`backend/.venv`) | Backend, ML training, evaluation |
+| **FastAPI** | fastapi | 0.111.0 | Async REST API |
+| **ASGI Server** | uvicorn | 0.29.0 | Web server |
+| **Web3 Client** | web3.py | 8.0.0 | Ethereum client (EIP-1559 support) |
+| **Pydantic** | pydantic | 2.14.1 | Schema validation |
+| **ORM** | SQLAlchemy | 2.0.30 | Database engine and session mapping |
+| **Machine Learning** | scikit-learn | 1.4.2 | Behavioral anomaly detection models |
+| **Deep Learning** | PyTorch | 2.14.1+cpu | MobileNetV2 visual feature extraction |
+| **Testing Engine** | pytest | 7.4.4 | 129 automated backend unit & integration tests |
+| **Contract Framework** | Truffle | 5.11.5 | 43 automated EVM contract test specifications |
+| **Local Blockchain** | Ganache CLI | 7.9.1 | Local deterministic testnet on port 7546 |
+| **Frontend Framework** | React / Vite | 18.3.1 / 6.0.3 | Web interface application |
+| **Web3 Frontend** | ethers.js | 6.13.4 | In-browser MetaMask contract interaction |
 
 ---
 
-## 4. Repository File Map
+## 3. Blockchain & Smart Contract Architecture
 
-```
-anti-counterfeit-3layer/
-├── contracts/                        # Solidity contracts and Truffle toolchain
-│   ├── contracts/
-│   │   ├── Migrations.sol           # Truffle migration manager
-│   │   └── ProductRegistry.sol      # Core Ethereum smart contract
-│   ├── migrations/
-│   │   ├── 1_initial_migration.js
-│   │   └── 2_deploy_product_registry.js
-│   ├── test/
-│   │   └── ProductRegistry.test.js  # 43 automated Truffle/Mocha tests
-│   └── truffle-config.js            # Network definitions (cli: port 7546)
-├── backend/                         # FastAPI backend service
-│   ├── alembic/                     # Database migrations
-│   │   ├── versions/
-│   │   │   ├── 0001_initial_schema.py
-│   │   │   └── 0002_add_image_embedding.py
-│   │   └── env.py
-│   ├── app/
-│   │   ├── chain.py                 # web3.py v8 client (EIP-1559, contract calls)
-│   │   ├── config.py                # Environment variable reader (.env)
-│   │   ├── crud.py                  # SQLAlchemy database operations
-│   │   ├── database.py              # Engine and session creation
-│   │   ├── fusion.py                # Multi-signal decision engine
-│   │   ├── identity_service.py      # QR & NFC validation service
-│   │   ├── main.py                  # FastAPI route controllers & middleware
-│   │   ├── models.py                # SQLAlchemy ORM declarations
-│   │   └── schemas.py               # Pydantic v2 schemas
-│   ├── identity/
-│   │   ├── nfc_ntag.py              # NTAG 424 DNA SUN / AES-128 CMAC emulator
-│   │   ├── nfc_rewrite_baseline.py  # HACP5 race baseline simulation
-│   │   └── qr_identity.py           # HMAC-SHA256 QR payload builder
-│   ├── seed.py                      # Demo data generator (20 products)
-│   └── tests/
-│       ├── conftest.py              # Pytest fixtures (DB cleanup, Ganache fixtures)
-│       ├── test_chain.py            # On-chain integration tests
-│       ├── test_fusion.py           # Fusion truth table unit tests
-│       └── test_identity.py         # CMAC/QR cryptographic tests
-├── ml/                              # Machine learning engines
-│   ├── scan_risk/
-│   │   ├── features.py              # Spatio-temporal behavioral feature extraction
-│   │   ├── generator.py             # 2,000 synthetic product scan simulator
-│   │   ├── model.py                 # RandomForest, IsolationForest, FairRuleBaseline
-│   │   └── scorer.py                # Inference pipeline
-│   └── image_signal/
-│       ├── embedder.py              # MobileNetV2 1280-d feature extractor
-│       └── similarity.py            # Cosine distance & Platt scaling calibration
-├── frontend/                        # React 18 single page application
-│   ├── src/
-│   │   ├── components/              # Reusable UI cards, badges, signal rows
-│   │   ├── lib/
-│   │   │   ├── api.ts               # Typed client calling Vite /api proxy
-│   │   │   └── metamask.ts          # ethers.js MetaMask wallet provider & ABI
-│   │   ├── pages/
-│   │   │   ├── AdminPage.tsx        # Smart contract administration & whitelisting
-│   │   │   ├── DashboardPage.tsx    # Scan logs and live metrics dashboard
-│   │   │   ├── DemoPage.tsx         # Interactive simulation walkthrough
-│   │   │   ├── ManufacturerPage.tsx # Product registration & QR/NFC export
-│   │   │   └── VerifyPage.tsx       # Multi-layer consumer verification portal
-│   │   ├── App.tsx                  # Routing and global navbar
-│   │   └── main.tsx
-│   └── vite.config.ts               # Proxy configuration (/api -> :8000)
-├── experiments/                     # Research experiment runner & evaluation
-│   ├── run_all.py                   # Master reproducible benchmark script
-│   ├── measure_gas.js               # Truffle gas consumption profiler
-│   └── results/                     # Saved CSV metrics, ROC curves, models
-├── docs/                            # Research & design documentation
-│   ├── DECISIONS.md                 # Architectural decision records (ADRs)
-│   ├── LIMITATIONS.md               # Honest technical boundary disclosures
-│   ├── THREAT_MODEL.md              # Security threats, attacker models, defenses
-│   └── VERSIONS.md                  # Dependency pinning rationale
-├── .env                             # Secret configuration (never commit)
-└── README.md                        # Quickstart documentation
-```
+- **Contract:** `ProductRegistry.sol` (Solidity 0.8.20, optimizer runs=200).
+- **Deployed Address:** `0xCfEB869F69431e42cdB54A4F4f105C19C080A601` (read from `.env`).
+- **Network Parameters:** Ganache CLI, Port 7546, Chain ID 1337 (`--deterministic --accounts 10`).
+
+### 3.1 Account Roles (Deterministic Ganache CLI)
+*No private keys are stored in documentation or repository files.*
+
+- **Account #0 (`0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1`):** Contract Owner / Deployer. Authorized to manage manufacturer whitelists (`addManufacturer`, `removeManufacturer`) and assign the operator (`setOperator`).
+- **Account #1 (`0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0`):** Backend Operator. Authorized to call `logScan` and `markSold`.
+- **Account #2 (`0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b`):** Primary Manufacturer. Authorized to call `registerProduct` once whitelisted.
+- **Accounts #3–#9:** Auxiliary manufacturers and consumer accounts.
+
+### 3.2 State Functions & Events
+- `addManufacturer(address _mfr)`: Whitelists a manufacturer address (`onlyOwner`).
+- `removeManufacturer(address _mfr)`: Revokes manufacturer permissions (`onlyOwner`).
+- `setOperator(address _newOperator)`: Updates the backend operator account (`onlyOwner`).
+- `registerProduct(bytes32 productId, bytes32 recordHash)`: Registers product identity (`onlyManufacturer`).
+- `markSold(bytes32 productId)`: Marks a product as sold upon consumer purchase (`onlyOperator`).
+- `logScan(bytes32 productId, bytes32 scanHash, uint8 verdict)`: Appends auditable scan verdict to ledger (`onlyOperator`).
+
+### 3.3 Accurate Privacy Analysis: Secret-Salted On-Chain Hashing
+Zero plaintext coordinates, device IDs, or consumer identities are stored on-chain:
+- **`recordHash`:** SHA-256 over `name|brand|serial|image_sha256`.
+- **`scanHash`:** SHA-256 over `salt|productId|channel|deviceHash|lat|lon|ts`.
+
+> **Privacy Disclosure:** Without a secret salt, an unsalted hash over low-entropy data (such as city coordinates rounded to 2 decimals and timestamps within a known 1-hour window) can be inverted via offline dictionary or rainbow-table attacks. To prevent this, the backend incorporates a server-side secret salt (`IDENTITY_HMAC_SECRET` from `.env`) into `build_scan_hash()` (implemented in `backend/app/chain.py`), making the on-chain scan hashes preimage-resistant against third-party ledger observers.
 
 ---
 
-## 5. Blockchain Layer Details
+## 4. Attack Scenarios & Behavioral Simulation
 
-### Smart Contract: `ProductRegistry.sol`
-Deployed on Ganache at `0xCfEB869F69431e42cdB54A4F4f105C19C080A601`.
-- **Compiler:** Solidity `0.8.20` with optimizer enabled (200 runs).
-- **Accounts and Roles (Deterministic Ganache Mnemonic):**
-  - **Account #0 (`0x90F8bf6A...`):** Owner / Deployer. Holds sole permission to call `addManufacturer`, `removeManufacturer`, and `setOperator`.
-  - **Account #1 (`0xFFcf8FDE...`):** Operator. Designated backend server account. Holds sole permission to call `logScan` and `markSold`.
-  - **Account #2 (`0x22d491Bd...`):** Default Manufacturer. Whitelisted by owner; signs `registerProduct`.
-  - **Accounts #3–#9:** Additional manufacturer or consumer accounts.
+The synthetic dataset generator (`experiments/simulate_scans.py`) simulates realistic journeys across 2,000 products with realistic GPS noise (+/- 0.012 deg) and 7 distinct attack patterns:
 
-### Privacy-Preserving On-Chain Logging
-Zero Personally Identifiable Information (PII) or plaintext scan locations touch the public ledger:
-1. `recordHash`: SHA-256 of `name|brand|serial|image_sha256` recorded during registration.
-2. `scanHash`: SHA-256 of `productId|channel|deviceHash|lat|lon|timestamp` generated by the backend before calling `logScan(productId, scanHash, verdict)`.
-3. Verdict codes: `0 = Verified`, `1 = ManualReview`, `2 = Suspicious`, `3 = Unregistered`.
+| Attack Code | Attack Identifier | Technical Characteristics | Citation |
+|:---:|---|---|---|
+| **A** | `impossible_travel` | Physical velocity > 1200 km/h between consecutive scans using Haversine calculation. | `experiments/simulate_scans.py` |
+| **B** | `burst` | Rapid barrage of 15–30 scans within 15 minutes on a single product ID. | `experiments/simulate_scans.py` |
+| **C** | `slow_clone` | Low-frequency clone scans dispersed across 5–8 distinct cities over several weeks. | `experiments/simulate_scans.py` |
+| **D** | `unregistered` | Fabricated product identifiers not present on the Ethereum blockchain. | `experiments/simulate_scans.py` |
+| **E** | `nfc_replay` | Presentation of a counter value <= last accepted hardware counter (delta <= 0). | `experiments/simulate_scans.py` |
+| **F** | `nfc_clone_first` | Attacker skims tag first; subsequent genuine read exhibits large counter jump (> 10). | `experiments/simulate_scans.py` |
+| **G** | `stealth_clone` | **HELD-OUT TEST SET ONLY:** Low-and-slow clone mimicking normal consumer cadence. Zero exposure during training. | `experiments/simulate_scans.py` |
 
 ---
 
-## 6. Cryptographic Identity Layer
+## 5. Machine Learning Evaluation & Honest Benchmark Results
 
-### Channel A: QR Identity (HMAC-SHA256)
-- The QR payload encodes: `https://verify.example.com/v?pid=<productId>&ser=<serial>&sig=<signature>`
-- Signature calculation:
-  $$\text{sig} = \text{HMAC-SHA256}(\text{IDENTITY\_HMAC\_SECRET}, \text{productId} \parallel \text{serial})[:32]$$
-- Provides fast verification in air-gapped or camera-only environments.
+Evaluated across 5 independent random seeds (`42, 7, 13, 99, 256`):
 
-### Channel B: Dynamic NFC Identity (NTAG 424 DNA SUN)
-- Emulates the Secure Unique NFC (SUN) protocol of NXP NTAG 424 DNA chips.
-- Each scan yields:
-  1. `uid`: 7-byte unique identifier (e.g. `04A2B3C4D5E6F7`).
-  2. `counter`: 3-byte monotonically increasing hardware counter.
-  3. `cmac`: 8-byte AES-128 CMAC over `uid || counter` computed with `K_SDM`.
-- **Counter Freshness Check:**
-  $$\Delta = \text{counter}_{\text{scan}} - \text{counter}_{\text{stored}}$$
-  - If $\Delta \le 0$: Replay attack detected immediately.
-  - If $\Delta = 1$: Ideal sequential scan.
-  - If $1 < \Delta \le 10$: Minor skip (missed scans or intermediate reads).
-  - If $\Delta > 10$: Severe counter jump (indicative of cloning or counter tampering).
+### 5.1 Model Comparison
+*Generated directly from `experiments/results/metrics.json` and `experiments/results/model_comparison.csv`:*
 
----
+| Model | Precision | Recall | F1 Score | ROC-AUC | FAR (Friction on Genuine) |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| **FairRuleBaseline** | 0.704+/-0.028 | 0.455+/-0.060 | 0.551+/-0.051 | 0.733+/-0.026 | 0.017+/-0.003 |
+| **IsolationForest** | 0.648+/-0.028 | 0.670+/-0.023 | 0.659+/-0.020 | 0.881+/-0.008 | 0.032+/-0.003 |
+| **RandomForestClassifier** | 0.975+/-0.019 | 0.753+/-0.037 | 0.849+/-0.016 | 0.978+/-0.004 | 0.002+/-0.002 |
 
-## 7. Machine Learning Spatio-Temporal Engine
+- **FairRuleBaseline Thresholds:** `speed_kmh` = 750.0 km/h, `burst_1h` = 3, `gap_thresh` = 8 (from `experiments/results/thresholds.json`).
+- **Model Decision Thresholds:** RandomForest = 0.75, IsolationForest = 0.5935.
 
-### Feature Vector Definition
-For every incoming scan event, the engine computes an 8-dimensional feature vector:
-1. `delta_time_hours`: Elapsed time since the previous scan of the same product ID.
-2. `distance_km`: Haversine great-circle distance between current scan and previous scan coordinates:
-   $$d = 2R \arcsin \left( \sqrt{\sin^2\left(\frac{\Delta\phi}{2}\right) + \cos\phi_1\cos\phi_2\sin^2\left(\frac{\Delta\lambda}{2}\right)} \right)$$
-3. `speed_kmh`: Implied physical velocity:
-   $$\text{speed} = \frac{\text{distance\_km}}{\max(\text{delta\_time\_hours}, 0.001)}$$
-4. `scans_last_1h`: Burst scan count across the past 60 minutes.
-5. `scans_last_24h`: Burst scan count across the past 24 hours.
-6. `device_entropy`: Shannon entropy over unique `device_id` strings scanning this product:
-   $$H(X) = -\sum_{i} P(x_i) \log_2 P(x_i)$$
-7. `is_new_location`: Boolean indicator (1 or 0) for whether coordinates deviate $>50\text{ km}$ from known product cluster centers.
-8. `nfc_counter_gap`: Discontinuity metric $\max(0, \Delta - 1)$.
+### 5.2 Security Comparison Matrix
+*Generated directly from `experiments/results/attack_matrix.csv`:*
 
-### Attack Profiles & Realistic Simulation
-Trained across 2,000 synthetic products (5 independent seeds) covering 7 attack classes:
-- **Attack A (Rapid Remote Clone):** Identical tags scanned in Tokyo and New York within 15 minutes ($\text{speed} > 40,000\text{ km/h}$).
-- **Attack B (NFC Counter Replay):** Cloned tag replaying stale counter ($\Delta \le 0$).
-- **Attack C (NFC Counter Race):** Concurrent reads generating gap anomalies.
-- **Attack D (Distributed Physical Counterfeiting):** Multi-device high burst rates across multiple retail stores.
-- **Attack E (Label Harvesting):** Legitimate label scanned at warehouse, then discarded and rescanned 6 months later.
-- **Attack F (Post-Sale Re-scanning):** Repeated reads after product has been marked `sold` on-chain.
-- **Attack G (Held-Out Stealth Clone):** Sub-threshold physical movement with delayed reads to test generalization against unseen threats.
+| attack_type | static_qr | hacp5 | chain_only | nfc_no_ml | rule_baseline | ml_risk | full_fusion |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| A_impossible_travel | 0.0 | 0.0 | 0.0 | 0.0 | 0.7506944444444446 | 0.8973611111111112 | 0.8740277777777777 |
+| B_burst | 0.0 | 0.0 | 0.0 | 0.0 | 0.8510324010879643 | 0.8425367889606952 | 0.9669824489864386 |
+| C_slow_clone | 0.0 | 0.0 | 0.0 | 0.0 | 0.025605653184318743 | 0.7517038664859588 | 0.8851610068707588 |
+| D_unregistered | 0.0 | 0.0 | 1.0 | 1.0 | 0.0 | 0.0 | 1.0 |
+| E_nfc_replay | 0.0 | 1.0 | 0.0 | 1.0 | 0.8908888888888888 | 0.7993333333333333 | 0.7722222222222223 |
+| F_nfc_clone_first | 0.0 | 0.0 | 0.0 | 1.0 | 1.0 | 0.9094605475040257 | 0.7858615136876007 |
+| G_stealth_clone | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.23874345549738218 | 0.25968586387434556 |
+| user_friction_far | 0.0 | 1.0 | 0.0 | 0.0 | 0.01696544669496349 | 0.03249757904115842 | 0.0019602509437630206 |
 
-### Honest Benchmark Results
-Evaluated without target leakage:
-- **FairRuleBaseline:** Precision: `0.957`, Recall: `0.941`, F1: `0.949`
-- **IsolationForest (Unsupervised):** Precision: `0.912`, Recall: `0.884`, F1: `0.898`
-- **RandomForestClassifier (Supervised):** Precision: `0.988`, Recall: `0.985`, F1: `0.986`
+### 5.3 Multi-Layer Ablation Study
+*Generated directly from `experiments/results/ablation.csv`:*
+
+| condition | f1_mean | f1_std | far_mean | far_std |
+| :--- | :---: | :---: | :---: | :---: |
+| full_fusion | 0.8520516696546141 | 0.012829451482707557 | 0.0021894849194863493 | 0.0013033938754308594 |
+| no_ml | 0.5512832012473152 | 0.050796613343241544 | 0.01696544669496349 | 0.0025555010616684086 |
+| no_nfc_counter | 0.8443813390275821 | 0.017389915268250115 | 0.0019542743911347706 | 0.001226176488153251 |
+| leaky_sequence_features (cautionary baseline) | 0.9993521339858493 | 0.000601859679442692 | 0.00011844616681523042 | 0.00010552973820567032 |
 
 ---
 
-## 8. Multi-Signal Deterministic Fusion Engine
+## 6. NFC Verification & Gap Tolerance Policy
 
-The fusion layer evaluates up to four orthogonal signals using a deterministic priority cascade:
+Implemented in `backend/identity/nfc_ntag.py`:
 
-$$\text{Verdict} = f(\text{Identity}, \text{Chain}, \text{ML Risk}, \text{Visual})$$
+- **Hardware Standard:** Emulates NXP NTAG 424 DNA Secure Unique NFC (SUN) protocol.
+- **Authentication:** AES-128 CMAC truncated to 64 bits over `UID || Counter`.
+- **Gap Tolerance Parameter ($W = 5$):** Real-world NFC scans can miss intermediate increments due to radio frequency dropouts or user interruptions. The verifier permits counter jumps up to $W = 5$ taps (`DEFAULT_GAP = 5` in `backend/identity/nfc_ntag.py`).
+- **Decision Logic:**
+  - `ACCEPT`: counter > last AND counter <= last + W AND CMAC is valid.
+  - `DISPUTED`: counter <= last (replay or counter rollback).
+  - `DISPUTED`: counter > last + W (suspicious gap jump).
+  - `REJECT`: CMAC verification fails (invalid key or forged MAC).
 
-| Priority | Condition / Rule | Verdict Code | Verdict Name | Actionable Rationale |
+### 6.1 Clone-First Race Benchmark (1,000 Trials x 5 Seeds)
+*Generated directly from `experiments/results/race.csv`:*
+
+| scheme | scenario | n_trials | clone_accepted_rate_mean | clone_accepted_rate_std | genuine_rejected_rate_mean | genuine_rejected_rate_std | genuine_disputed_rate_mean | genuine_disputed_rate_std | genuine_recovered_rate_mean | genuine_recovered_rate_std |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| static_qr | replay | 1000 | 1.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| static_qr | skim_first | 1000 | 1.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| static_qr | guess | 1000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| hacp5_baseline | replay | 1000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| hacp5_baseline | skim_first | 1000 | 1.0000 | 0.0000 | 1.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| hacp5_baseline | guess | 1000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| nfc_cmac | replay | 1000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.3718 | 0.0181 | 1.0000 | 0.0000 |
+| nfc_cmac | skim_first | 1000 | 1.0000 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | 0.0000 | 1.0000 | 0.0000 |
+| nfc_cmac | guess | 1000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+
+> **Disputed-to-ManualReview Rule:** When an NFC counter exhibits a replay or large jump, `backend/app/fusion.py` assigns verdict `Manual review` rather than `Suspicious activity`. This ensures that legitimate consumers caught in clone-first race conditions are not permanently locked out, allowing recovery on subsequent sequential reads.
+
+---
+
+## 7. Multi-Signal Deterministic Fusion Rules
+
+Implemented in `backend/app/fusion.py` (Rule Priority Order 1 to 10):
+
+| Rule # | Condition / Trigger | Verdict Assigned | Rationale | Cited Source |
 |:---:|---|:---:|---|---|
-| **1** | Product missing on-chain (`exists == false`) | `3` | `Unregistered` | Critical counterfeit or unregistered barcode. |
-| **2** | Cryptographic failure (bad QR HMAC or invalid NFC CMAC) | `2` | `Suspicious` | Cryptographic signature forgery or replay attack. |
-| **3** | Impossible velocity ($\text{speed} > 1000\text{ km/h}$) | `2` | `Suspicious` | Physical clone scanned simultaneously in distant locations. |
-| **4** | NFC counter gap severe ($\Delta \le 0$ or $\Delta > 10$) | `2` | `Suspicious` | NFC tag cloned or rolled backwards. |
-| **5** | Product marked `sold` on-chain and rescanned elsewhere | `1` | `ManualReview` | Potential gray-market resale or recycled packaging. |
-| **6** | ML Risk Score $\ge 0.65$ | `2` | `Suspicious` | High behavioral anomaly probability. |
-| **7** | Visual embedding cosine similarity $< \text{threshold}$ | `1` | `ManualReview` | Packaging visual inconsistency or wrong product variant. |
-| **8** | ML Risk Score between $0.40$ and $0.65$ | `1` | `ManualReview` | Borderline behavioral anomaly requiring operator review. |
-| **9** | All checks clean ($\text{Risk} < 0.40$, valid crypto, on-chain) | `0` | `Verified` | Authentic genuine product. |
+| **1** | Product missing on-chain (`not on_chain`) | `Unregistered product` | Unregistered serial or counterfeit barcode. | `backend/app/fusion.py:101` |
+| **2** | NFC key mismatch (`identity_result == 'bad_mac'`) | `Suspicious activity` | Forged tag without valid AES master key. | `backend/app/fusion.py:108` |
+| **3** | High ML risk score (risk >= 0.75) | `Suspicious activity` | Multi-feature spatio-temporal anomaly detected. | `backend/app/fusion.py:116` |
+| **4** | Sold on-chain AND scanned in new location | `Suspicious activity` | Duplicate product circulating post-sale. | `backend/app/fusion.py:125` |
+| **5** | QR signature invalid (`identity_result == 'invalid'`) | `Suspicious activity` | Tampered QR payload or bad HMAC. | `backend/app/fusion.py:133` |
+| **6** | NFC counter disputed (`identity_result == 'disputed'`) | `Manual review` | Replay or counter gap; enables genuine recovery. | `backend/app/fusion.py:141` |
+| **7** | Already sold on-chain (same location / resale) | `Manual review` | Resale or packaging reuse requires verification. | `backend/app/fusion.py:149` |
+| **8** | Medium ML risk score (risk >= 0.3750) | `Manual review` | Minor anomaly pattern requiring operator check. | `backend/app/fusion.py:157` |
+| **9** | Visual mismatch (`image_result == 'counterfeit'`) | `Manual review` | Packaging discrepancy flagged by MobileNetV2. | `backend/app/fusion.py:166` |
+| **10**| All signals normal | `Verified` | Valid crypto, on-chain active, normal behavior. | `backend/app/fusion.py:174` |
 
 ---
 
-## 9. Visual Consistency Signal (MobileNetV2)
+## 8. Auxiliary Visual Consistency Verification (MobileNetV2)
 
-- **Model Architecture:** MobileNetV2 pretrained on ImageNet, extracting a 1,280-dimensional feature vector from the global average pooling layer.
-- **Normalization:** $\ell_2$ unit-length projection:
-  $$\hat{\mathbf{v}} = \frac{\mathbf{v}}{\|\mathbf{v}\|_2}$$
-- **Metric:** Cosine similarity:
-  $$S_C(\hat{\mathbf{u}}, \hat{\mathbf{v}}) = \hat{\mathbf{u}} \cdot \hat{\mathbf{v}}$$
-- **Calibration via Platt Scaling:**
-  $$P(\text{Genuine} \mid S_C) = \frac{1}{1 + \exp(A \cdot S_C + B)}$$
-  Fitted on the Stanford Online Products dataset.
-- **Abstain Band Policy:**
-  - $S_C \ge 0.78$: Visual match verified (`genuine`).
-  - $S_C \le 0.52$: Visual mismatch flagged (`counterfeit`).
-  - $0.52 < S_C < 0.78$: **Abstain** (Lighting, angle, or background ambiguity; system does not penalize legitimate products on visual alone).
+Implemented in `ml/image_signal/embedder.py` and evaluated in `ml/image_signal/evaluate_sop.py`:
 
----
+- **Backbone Architecture:** MobileNetV2 pretrained on ImageNet (1280-d unit-length feature embedding).
+- **Evaluation Dataset:** Stanford Online Products (SOP) — `1782` test pairs evaluated.
+- **Discrimination Thresholds (`ml/image_signal/artifacts/image_thresholds.json`):**
+  - Genuine threshold: $S_C \ge 0.2401$
+  - Counterfeit threshold: $S_C \le 0.0401$
+  - Abstain band: $0.0401 < S_C < 0.2401$
 
-## 10. Database Schema (MySQL 9)
+### 8.1 Empirical Visual Evaluation Results
+*Generated directly from `ml/image_signal/artifacts/sop_eval_results.json`:*
 
-Managed via Alembic in `backend/alembic/versions/`:
+| Metric | Measured Value | Meaning & Context |
+|---|:---:|---|
+| **ROC-AUC (All Impostors)** | 0.9115 | Overall pair discrimination capability |
+| **ROC-AUC (Hard Negatives)** | 0.8656 | Same superclass, different product class |
+| **ROC-AUC (Random Impostors)** | 0.9574 | Distant categories |
+| **FAR @ FRR = 1%** | 0.8013 (80.1%) | High security target yields high false acceptance |
+| **FAR @ FRR = 5%** | 0.4747 (47.5%) | Medium security target |
+| **FAR @ FRR = 10%** | 0.2710 (27.1%) | Relaxed rejection threshold |
+| **Raw ECE** | 0.1337 | Expected Calibration Error before Platt scaling |
+| **Calibrated ECE** | 0.0505 | Expected Calibration Error after Platt scaling |
+| **ECE Error Reduction** | 62.24% | Calibration improvement via logistic regression |
+| **Decision Coverage** | 0.6302 (63.0%) | Fraction of test pairs outside the abstain band |
+| **Abstain Rate** | 0.3698 (37.0%) | Fraction of ambiguous pairs deferred |
+| **Frozen Decision Accuracy** | **0.5013 (50.1%)** | Accuracy on non-abstaining pairs |
 
-### Table: `products`
-```sql
-CREATE TABLE products (
-    product_id VARCHAR(66) PRIMARY KEY,     -- 0x-prefixed 32-byte hex string
-    name VARCHAR(255) NOT NULL,
-    brand VARCHAR(255) NOT NULL,
-    serial VARCHAR(255) NOT NULL,
-    status VARCHAR(32) NOT NULL DEFAULT 'registered', -- 'registered' | 'sold'
-    manufacturer_address VARCHAR(42) NOT NULL,
-    record_hash VARCHAR(66) NOT NULL,
-    image_sha256 VARCHAR(64) NULL,
-    image_embedding BLOB NULL,              -- 1280 float32 (5,120 bytes)
-    created_at DATETIME NOT NULL
-);
-```
+### 8.2 Explanation of the Frozen Accuracy (~0.50)
+The frozen accuracy on non-abstaining pairs is **50.13%**, essentially random chance on a balanced binary task. This occurs because the MobileNetV2 backbone is frozen on generic ImageNet features without domain-specific metric learning (e.g. triplet or contrastive fine-tuning on Stanford Online Products). 
 
-### Table: `tags`
-```sql
-CREATE TABLE tags (
-    tag_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id VARCHAR(66) NOT NULL UNIQUE,
-    uid VARCHAR(14) NOT NULL,               -- 7-byte hex
-    counter INT NOT NULL DEFAULT 0,         -- Monotonic hardware counter
-    key_slot INT NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL,
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
-```
-
-### Table: `scans`
-```sql
-CREATE TABLE scans (
-    scan_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id VARCHAR(66) NOT NULL,
-    channel VARCHAR(16) NOT NULL,           -- 'qr' | 'nfc'
-    ts DATETIME NOT NULL,
-    lat DOUBLE NULL,
-    lon DOUBLE NULL,
-    device_id VARCHAR(64) NULL,
-    verdict VARCHAR(32) NOT NULL,           -- Verified | ManualReview | Suspicious | Unregistered
-    risk_score DOUBLE NULL,
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
-```
+This empirical finding validates our core architectural decision: **the visual image signal is treated strictly as an auxiliary, non-blocking 4th signal with an explicit abstain band** (`Rule 9` maps counterfeits to `Manual review`, never outright rejection). The primary security guarantees remain anchored in Layer 1 cryptographic identity and Layer 2 spatio-temporal behavioral modeling.
 
 ---
 
-## 11. Frontend Application Architecture
+## 9. On-Chain Gas Usage & Verification Latency
 
-The frontend is a React 18 single-page application bundled with Vite.
+*Generated directly from `experiments/results/gas_latency.csv`:*
 
-### Networking & Proxy
-In `vite.config.ts`, Vite proxies `/api` directly to `http://127.0.0.1:8000`:
-```ts
-server: {
-  proxy: {
-    '/api': {
-      target: 'http://127.0.0.1:8000',
-      changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/api/, '')
-    }
-  }
-}
-```
-This ensures the browser avoids cross-origin preflight issues and connects directly via the host origin `http://localhost:5173`.
-
-### Key Pages:
-1. **`/admin` (AdminPage):** Connects to MetaMask using Account #0 (Owner). Inspects on-chain roles, displays contract configuration, and allows one-click or custom whitelisting/revoking of manufacturer addresses via `addManufacturer`.
-2. **`/manufacturer` (ManufacturerPage):** Allows authorized manufacturers to register a new product with an optional product image, generating on-chain registration transactions and exportable QR codes + NFC payloads.
-3. **`/verify` (VerifyPage):** Consumer portal. Supports camera-based QR code scanning, manual payload entry, geolocation reporting, and multi-signal verification breakdown.
-4. **`/dashboard` (DashboardPage):** Real-time monitoring portal displaying global metrics, scan counts, verdict distribution charts, and recent activity.
-5. **`/demo` (DemoPage):** Interactive demonstration showcasing simulated attack scenarios (e.g. impossible speed, replay attacks) and step-by-step resolution.
+| type | name_or_function | value | unit |
+| :--- | :---: | :---: | :---: |
+| gas | addManufacturer | 47529 | gas |
+| gas | registerProduct | 115709 | gas |
+| gas | markSold | 30978 | gas |
+| gas | logScan(verdict=0 Verified) | 26714 | gas |
+| gas | logScan(verdict=1 ManualReview) | 26726 | gas |
+| gas | logScan(verdict=2 Suspicious) | 26726 | gas |
+| gas | logScan(verdict=3 Unregistered) | 26726 | gas |
+| gas | removeManufacturer | 25518 | gas |
+| gas | setOperator | 30685 | gas |
+| latency_e2e_api | median | 161.13 | ms |
+| latency_e2e_api | p95 | 201.4 | ms |
+| latency_e2e_api | mean | 163.99 | ms |
+| latency_e2e_api | std | 19.29 | ms |
+| latency_e2e_api | min | 131.75 | ms |
+| latency_e2e_api | max | 304.62 | ms |
+| latency_e2e_api | requests_count | 200 | requests |
 
 ---
 
-## 12. Complete Operational Runbook
+## 10. End-to-End Operational Walkthrough
 
-Follow these exact steps to start the complete platform from a clean state:
+To verify the complete platform in a browser:
 
-### Step 1: Start Ganache Blockchain
-Open Terminal 1 (PowerShell):
-```powershell
-ganache --port 7546 --deterministic --accounts 10 --networkId 1337
-```
-*Keep this running. Do not close.*
-
-### Step 2: Deploy Contracts
-Open Terminal 2 (PowerShell):
-```powershell
-cd C:\Blockchain\anti-counterfeit-3layer\contracts
-npx truffle migrate --network cli --reset
-cd ..
-```
-*Deploys `ProductRegistry` to `0xCfEB869F69431e42cdB54A4F4f105C19C080A601`.*
-
-### Step 3: Authorize Manufacturer (Two Options)
-- **Option A (MetaMask Web UI):** Go to `http://localhost:5173/admin`, connect MetaMask with Account #0 (`0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d`), click **"Use Account #2 (Default)"**, and click **"Whitelist via MetaMask"**.
-- **Option B (Command Line):**
-  ```powershell
-  .\backend\.venv\Scripts\python.exe -c "import sys; sys.path.insert(0,'backend'); from app.chain import get_contract,get_w3; from eth_account import Account; w3=get_w3(); c=get_contract(); o=Account.from_key('0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d'); tx=c.functions.addManufacturer('0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b').build_transaction({'from':o.address,'nonce':w3.eth.get_transaction_count(o.address),'gas':100000}); w3.eth.wait_for_transaction_receipt(w3.eth.send_raw_transaction(o.sign_transaction(tx).raw_transaction)); print('Whitelisted')"
-  ```
-
-### Step 4: Run Database Migrations
-```powershell
-cd C:\Blockchain\anti-counterfeit-3layer\backend
-.\.venv\Scripts\python.exe -m alembic upgrade head
-cd ..
-```
-
-### Step 5: Start FastAPI Backend Server
-In Terminal 2:
-```powershell
-cd C:\Blockchain\anti-counterfeit-3layer\backend
-.\.venv\Scripts\uvicorn.exe app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-*Health check:* `curl http://127.0.0.1:8000/health` should return `{"status":"ok","db":"ok","chain":"ok","contract":"ok"}`.
-
-### Step 6: Start Frontend Server
-Open Terminal 3 (PowerShell):
-```powershell
-cd C:\Blockchain\anti-counterfeit-3layer\frontend
-npm run dev
-```
-*Access frontend in browser at:* `http://localhost:5173/`
-
-### Step 7: Seed Demo Products (Optional)
-In another terminal:
-```powershell
-cd C:\Blockchain\anti-counterfeit-3layer
-.\backend\.venv\Scripts\python.exe backend\seed.py
-```
-*Seeds 20 demo luxury watches, handbags, and consumer goods into MySQL and Ganache.*
-
----
-
-## 13. Running Automated Tests
-
-All tests are repeatable and run without external dependencies:
-
-```powershell
-# 1. Smart Contract Tests (43 tests)
-cd C:\Blockchain\anti-counterfeit-3layer\contracts
-npx truffle test --network cli
-
-# 2. Backend, Cryptographic & ML Integration Tests (129 tests)
-cd C:\Blockchain\anti-counterfeit-3layer
-.\backend\.venv\Scripts\pytest.exe backend/tests/ -v
-
-# 3. Master Research Experiment Benchmark Runner
-.\backend\.venv\Scripts\python.exe experiments/run_all.py
-```
-
----
-
-## 14. Essential Rules for Agents Working on this Repo
-
-1. **Virtual Environment Isolation:** Always execute Python commands using `backend\.venv\Scripts\python.exe`. Never modify system Python.
-2. **Database Credentials:** MySQL user is `ac_user`. The credentials live strictly in `.env`. **Never use or request the MySQL `root` account.**
-3. **No Fabricated Numbers:** All reported metrics (accuracy, F1, gas costs, latencies) must originate from executable scripts. Never invent metrics.
-4. **Encoding & Windows Safety:** Write all files as UTF-8 without BOM. Do not include emojis in Python `print()` statements to prevent Windows `cp1252` encoding crashes.
-5. **Contract Immutability:** Do not edit contracts under `contracts/contracts/` unless explicitly requested, as doing so alters deployed ABIs and bytecodes.
-6. **Chain Synchronicity:** Whenever Ganache is restarted, remember that block height resets to 0. You must re-run `truffle migrate --reset` and re-whitelist Account #2 before attempting product registration.
+1. **Start the Stack:**
+   - Terminal 1: `ganache --port 7546 --deterministic --accounts 10 --networkId 1337`
+   - Terminal 2: `truffle migrate --network cli --reset` (in `contracts/`)
+   - Terminal 3: `.\backend\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload`
+   - Terminal 4: `npm run dev` (in `frontend/`, opens `http://localhost:5173/`)
+2. **Authorize Manufacturer:** Go to `/admin`, connect MetaMask with Account #0, click **"Use Account #2 (Default)"**, then click **"✨ Whitelist via MetaMask"**.
+3. **Register Product:** Go to `/manufacturer`, enter product details (e.g. `Rolex Submariner`), select an image, and submit registration. Copy the generated Product ID and NFC payload.
+4. **First Verification (Authentic Scan):** Go to `/verify`, select NFC mode, enter the UID, counter `1`, and CMAC. Click **Verify** -> Status: `Verified`.
+5. **Replay NFC Tap (Soft Dispute):** On `/verify`, submit the exact same counter `1` again -> Status: `Manual review` (NFC counter anomaly detected).
+6. **Mark as Sold (Consumer Point-of-Sale):** In the Consumer Action card on `/verify`, click **"🏷️ Mark as Sold"** -> Triggers on-chain `markSold()` transaction.
+7. **Post-Sale Scan:** Click **Verify** again -> Status: `Manual review` (Product has already been sold on-chain).
+8. **Dashboard Inspection:** Go to `/dashboard` -> Live charts reflect the verified, disputed, and sold events.
