@@ -5,31 +5,36 @@ Stanford Online Products (SOP) calibration and evaluation pipeline for Phase 8.
 
 Methodology:
 1. Calibration set sampled from Ebay_train.txt (product-disjoint from test set).
-2. MobileNetV2 extracts 1280-d unit-length feature embeddings.
-3. Platt scaling (logistic regression on cosine similarities) is fit on calibration set.
-4. Decision thresholds chosen on calibration set only (e.g., at fixed FRR targets).
-5. Evaluation performed on Ebay_test.txt with frozen thresholds:
+2. MobileNetV2 (1280-d) and DINOv2 ViT-S/14 (384-d) extract unit-length feature embeddings.
+3. Platt scaling (logistic regression on cosine similarities) fit on calibration set.
+4. Decision thresholds chosen strictly on the validation/calibration split:
+   - Operating point at FRR = 5% (tau_cnt = 0.2402 for MobileNetV2).
+   - Confident genuine point at FAR = 5% (tau_gen = 0.5100 for MobileNetV2).
+   - Calibrated abstain margin [tau_cnt, tau_gen] where scores are uncertain.
+5. Evaluation performed on Ebay_test.txt (product-disjoint) with frozen thresholds:
    - ROC-AUC (overall, hard negatives, random impostors)
    - False Acceptance Rate (FAR) at fixed False Rejection Rates (FRR = 1%, 5%, 10%)
    - Expected Calibration Error (ECE) before and after Platt scaling
-   - Coverage-vs-Accuracy curve under varying abstain margins
-6. Saves artifacts and figures to ml/image_signal/artifacts/.
+   - Decision coverage, abstain rate, and accuracy on decisive pairs
+6. Comparative evaluation against stronger self-supervised vision backbone (DINOv2).
+7. Saves artifacts and figures to ml/image_signal/artifacts/.
 """
 
 from __future__ import annotations
-import csv
 import json
-import math
 import os
 from pathlib import Path
 import random
 import sys
-import time
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
+import torch
+import torch.nn.functional as F
+from torchvision import transforms
 
 # Ensure repository root is on sys.path
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -37,7 +42,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from ml.image_signal.embedder import get_embedder
-from ml.image_signal.similarity import cosine_similarity, PlattCalibrator, classify
+from ml.image_signal.similarity import PlattCalibrator
 
 
 def load_sop_split(ann_file: Path, image_root: Path, max_classes: int | None = None, seed: int = 42):
@@ -60,7 +65,6 @@ def load_sop_split(ann_file: Path, image_root: Path, max_classes: int | None = N
             by_superclass.setdefault(sup_id, []).append(full_path)
             class_to_sup[cls_id] = sup_id
 
-    # Filter to classes with >= 2 images
     valid_cids = [c for c, imgs in by_class.items() if len(imgs) >= 2]
     if max_classes and len(valid_cids) > max_classes:
         rng = random.Random(seed)
@@ -84,21 +88,17 @@ def build_evaluation_pairs(by_class: dict[int, list[Path]], by_superclass: dict[
     for cls_id in all_cids:
         imgs = by_class[cls_id]
         ref = imgs[0]
-        # Genuine queries (up to 3)
         gen_imgs = imgs[1:4]
         for g in gen_imgs:
             pairs.append((ref, g, 1, "genuine"))
 
         n_neg = len(gen_imgs)
-
-        # Random impostor (drawn from other classes)
         other_cids = [c for c in all_cids if c != cls_id]
         if other_cids:
             samp_cids = rng.sample(other_cids, min(n_neg, len(other_cids)))
             for oc in samp_cids:
                 pairs.append((ref, rng.choice(by_class[oc]), 0, "random_impostor"))
 
-        # Hard negative (same superclass, different class)
         sup_id = class_to_sup[cls_id]
         pool = [p for p in by_superclass.get(sup_id, []) if p not in imgs]
         if pool:
@@ -146,6 +146,21 @@ def compute_ece(probs: np.ndarray, labels: np.ndarray, n_bins: int = 15) -> floa
     return float(ece)
 
 
+def extract_pair_similarities(pairs, embed_fn):
+    """Extract pair similarities with image-level caching."""
+    sims = []
+    labels = []
+    types = []
+    for ref_p, q_p, lab, q_type in pairs:
+        e1 = embed_fn(ref_p)
+        e2 = embed_fn(q_p)
+        if e1 is not None and e2 is not None:
+            sims.append(float(np.dot(e1, e2)))
+            labels.append(lab)
+            types.append(q_type)
+    return np.array(sims), np.array(labels), np.array(types)
+
+
 def run_pipeline(sop_root_str: str | None = None, n_calib_classes: int = 150, n_test_classes: int = 250):
     if not sop_root_str:
         from backend.app.config import get_settings
@@ -160,159 +175,195 @@ def run_pipeline(sop_root_str: str | None = None, n_calib_classes: int = 150, n_
     test_ann = sop_root / "Ebay_test.txt"
 
     print("=" * 70)
-    print("PHASE 8: MOBILE-NET-V2 IMAGE SIGNAL EVALUATION (SOP DATASET)")
+    print("PHASE 8: IMAGE SIGNAL CALIBRATION & BENCHMARK PIPELINE")
     print("=" * 70)
     print(f"Dataset root: {sop_root}")
 
-    embedder = get_embedder()
-    emb_cache: dict[Path, np.ndarray] = {}
-
-    def get_emb(p: Path) -> np.ndarray | None:
-        if p in emb_cache:
-            return emb_cache[p]
-        try:
-            emb = embedder.embed_file(p)
-            emb_cache[p] = emb
-            return emb
-        except Exception as e:
-            return None
-
-    # 1. Calibration Phase (Ebay_train.txt)
-    print(f"\n[1/4] Loading Calibration Set from Ebay_train.txt ({n_calib_classes} classes)...")
+    # Build calibration and test pairs
+    print(f"\n[1/5] Building pair sets from SOP...")
     cal_classes, cal_sups, cal_c2s = load_sop_split(train_ann, sop_root, max_classes=n_calib_classes, seed=42)
     cal_pairs = build_evaluation_pairs(cal_classes, cal_sups, cal_c2s, seed=42)
-    print(f"  Generated {len(cal_pairs)} calibration image pairs.")
+    print(f"  Calibration pairs (Ebay_train.txt): {len(cal_pairs)} across {len(cal_classes)} classes")
 
-    print("  Extracting embeddings for calibration pairs...")
-    cal_sims = []
-    cal_labels = []
-    for ref_p, q_p, lab, q_type in cal_pairs:
-        e1 = get_emb(ref_p)
-        e2 = get_emb(q_p)
-        if e1 is not None and e2 is not None:
-            sim = float(np.dot(e1, e2))
-            cal_sims.append(sim)
-            cal_labels.append(lab)
-
-    cal_sims = np.array(cal_sims)
-    cal_labels = np.array(cal_labels)
-
-    # Fit Platt scaling
-    print("  Fitting Platt scaling calibrator on calibration similarities...")
-    platt = PlattCalibrator()
-    platt.fit(cal_sims, cal_labels)
-    print(f"  Calibrator parameters: scale A = {platt.a:.4f}, bias B = {platt.b:.4f}")
-
-    # Select operating thresholds on calibration set at FRR = 5%
-    cal_fpr, cal_tpr, cal_thr, _ = compute_roc(cal_labels, cal_sims)
-    far_05, thr_gen = get_far_at_frr(cal_fpr, cal_tpr, cal_thr, 0.05)
-    far_10, thr_cnt = get_far_at_frr(cal_fpr, cal_tpr, cal_thr, 0.50)  # low threshold for confident counterfeit
-    thr_cnt = min(thr_cnt, thr_gen - 0.20)  # ensure distinct margin
-
-    print(f"  Selected thresholds (validation only):")
-    print(f"    Genuine threshold (FRR 5%): {thr_gen:.4f}")
-    print(f"    Counterfeit threshold:      {thr_cnt:.4f}")
-
-    # 2. Test Phase (Ebay_test.txt - product-disjoint)
-    print(f"\n[2/4] Evaluating on Test Split from Ebay_test.txt ({n_test_classes} classes, thresholds frozen)...")
     test_classes, test_sups, test_c2s = load_sop_split(test_ann, sop_root, max_classes=n_test_classes, seed=1337)
     test_pairs = build_evaluation_pairs(test_classes, test_sups, test_c2s, seed=1337)
-    print(f"  Generated {len(test_pairs)} test image pairs.")
+    print(f"  Test pairs (Ebay_test.txt, product-disjoint): {len(test_pairs)} across {len(test_classes)} classes")
 
-    print("  Extracting embeddings for test pairs...")
-    test_sims = []
-    test_labels = []
-    test_types = []
-    for ref_p, q_p, lab, q_type in test_pairs:
-        e1 = get_emb(ref_p)
-        e2 = get_emb(q_p)
-        if e1 is not None and e2 is not None:
-            sim = float(np.dot(e1, e2))
-            test_sims.append(sim)
-            test_labels.append(lab)
-            test_types.append(q_type)
+    # -------------------------------------------------------------
+    # Model 1: MobileNetV2 (1280-d)
+    # -------------------------------------------------------------
+    print(f"\n[2/5] Evaluating MobileNetV2 (1280-d)...")
+    mobilenet = get_embedder()
+    mb_cache: dict[Path, np.ndarray] = {}
+    def get_mb_emb(p: Path) -> np.ndarray | None:
+        if p not in mb_cache:
+            try:
+                mb_cache[p] = mobilenet.embed_file(p)
+            except Exception:
+                return None
+        return mb_cache[p]
 
-    test_sims = np.array(test_sims)
-    test_labels = np.array(test_labels)
-    test_types = np.array(test_types)
+    mb_cal_sims, mb_cal_labels, _ = extract_pair_similarities(cal_pairs, get_mb_emb)
+    mb_test_sims, mb_test_labels, mb_test_types = extract_pair_similarities(test_pairs, get_mb_emb)
 
-    # 3. Compute Metrics on Test Set
-    print("\n[3/4] Computing ROC-AUC, FAR@FRR, ECE, and Abstain Analysis...")
-    fpr_all, tpr_all, thr_all, auc_all = compute_roc(test_labels, test_sims)
+    # Threshold selection on validation split
+    mb_gen_sims = mb_cal_sims[mb_cal_labels == 1]
+    mb_imp_sims = mb_cal_sims[mb_cal_labels == 0]
 
-    # Subsets: hard negatives vs random impostors
-    mask_hard = (test_labels == 1) | (test_types == "hard_negative")
-    fpr_hard, tpr_hard, _, auc_hard = compute_roc(test_labels[mask_hard], test_sims[mask_hard])
+    # Target FRR <= 5% determines counterfeit threshold (only 5% of genuine items fall below this)
+    mb_thr_cnt = float(np.percentile(mb_gen_sims, 5.0))
+    # Target FAR <= 5% determines genuine threshold (only 5% of impostors exceed this)
+    mb_thr_gen = float(np.percentile(mb_imp_sims, 95.0))
 
-    mask_rand = (test_labels == 1) | (test_types == "random_impostor")
-    fpr_rand, tpr_rand, _, auc_rand = compute_roc(test_labels[mask_rand], test_sims[mask_rand])
+    # Single-threshold binary operating point at FRR = 5% (tau_opt = mb_thr_cnt)
+    mb_single_opt_thr = mb_thr_cnt
 
-    far_01, thr_01 = get_far_at_frr(fpr_all, tpr_all, thr_all, 0.01)
-    far_05, thr_05 = get_far_at_frr(fpr_all, tpr_all, thr_all, 0.05)
-    far_10, thr_10 = get_far_at_frr(fpr_all, tpr_all, thr_all, 0.10)
+    print(f"  Validation chosen thresholds (MobileNetV2):")
+    print(f"    Counterfeit threshold (FRR <= 5%): {mb_thr_cnt:.4f}")
+    print(f"    Genuine threshold     (FAR <= 5%): {mb_thr_gen:.4f}")
+    print(f"    Abstain band:                      [{mb_thr_cnt:.4f}, {mb_thr_gen:.4f}]")
 
-    # ECE before calibration (raw cosine similarity clamped to [0,1])
-    raw_probs = np.clip(test_sims, 0.0, 1.0)
-    ece_before = compute_ece(raw_probs, test_labels, n_bins=15)
+    # Fit Platt calibrator
+    platt_mb = PlattCalibrator()
+    platt_mb.fit(mb_cal_sims, mb_cal_labels)
 
-    # ECE after Platt scaling
-    cal_probs = platt.predict_proba_array(test_sims)
-    ece_after = compute_ece(cal_probs, test_labels, n_bins=15)
+    # Test metrics for MobileNetV2
+    mb_fpr_all, mb_tpr_all, mb_thr_all, mb_auc_all = compute_roc(mb_test_labels, mb_test_sims)
+    mask_hard = (mb_test_labels == 1) | (mb_test_types == "hard_negative")
+    mb_fpr_hard, mb_tpr_hard, _, mb_auc_hard = compute_roc(mb_test_labels[mask_hard], mb_test_sims[mask_hard])
+    mask_rand = (mb_test_labels == 1) | (mb_test_types == "random_impostor")
+    mb_fpr_rand, mb_tpr_rand, _, mb_auc_rand = compute_roc(mb_test_labels[mask_rand], mb_test_sims[mask_rand])
 
-    # Abstain coverage vs accuracy analysis
-    margins = np.linspace(0.0, 0.30, 20)
-    cov_acc_curve = []
-    base_center = (thr_gen + thr_cnt) / 2.0
-    for m in margins:
-        t_high = min(base_center + m, 0.95)
-        t_low = max(base_center - m, 0.05)
-        abstain_mask = (test_sims > t_low) & (test_sims < t_high)
-        n_abstain = int(abstain_mask.sum())
-        coverage = 1.0 - (n_abstain / len(test_sims))  # fraction of decisions made
-        decisive = ~abstain_mask
-        if decisive.any():
-            pred = np.where(test_sims[decisive] >= t_high, 1, 0)
-            acc = float((pred == test_labels[decisive]).mean())
-        else:
-            acc = 1.0
-        cov_acc_curve.append({"margin": round(float(m), 4), "coverage": round(coverage, 4), "accuracy": round(acc, 4)})
+    mb_far_01, mb_t01 = get_far_at_frr(mb_fpr_all, mb_tpr_all, mb_thr_all, 0.01)
+    mb_far_05, mb_t05 = get_far_at_frr(mb_fpr_all, mb_tpr_all, mb_thr_all, 0.05)
+    mb_far_10, mb_t10 = get_far_at_frr(mb_fpr_all, mb_tpr_all, mb_thr_all, 0.10)
 
-    # Coverage at the frozen chosen thresholds
-    abstain_frozen = (test_sims > thr_cnt) & (test_sims < thr_gen)
-    frozen_cov = 1.0 - float(abstain_frozen.mean())
-    frozen_dec = ~abstain_frozen
-    if frozen_dec.any():
-        frozen_pred = np.where(test_sims[frozen_dec] >= thr_gen, 1, 0)
-        frozen_acc = float((frozen_pred == test_labels[frozen_dec]).mean())
-    else:
-        frozen_acc = 1.0
+    mb_ece_raw = compute_ece(np.clip(mb_test_sims, 0.0, 1.0), mb_test_labels)
+    mb_cal_probs = platt_mb.predict_proba_array(mb_test_sims)
+    mb_ece_cal = compute_ece(mb_cal_probs, mb_test_labels)
 
-    # 4. Generate Figures & Save Artifacts
-    print("\n[4/4] Saving Artifacts and Generating Plots...")
+    # 1. Binary classification at single FRR=5% operating point without abstain
+    mb_single_pred = np.where(mb_test_sims >= mb_single_opt_thr, 1, 0)
+    mb_single_acc = float((mb_single_pred == mb_test_labels).mean())
+
+    # 2. Ternary classification outside abstain band
+    mb_decisive = (mb_test_sims >= mb_thr_gen) | (mb_test_sims <= mb_thr_cnt)
+    mb_coverage = float(mb_decisive.mean())
+    mb_abstain_rate = 1.0 - mb_coverage
+    mb_preds = np.where(mb_test_sims[mb_decisive] >= mb_thr_gen, 1, 0)
+    mb_decisive_acc = float((mb_preds == mb_test_labels[mb_decisive]).mean())
+
+    mb_tp = int(((mb_preds == 1) & (mb_test_labels[mb_decisive] == 1)).sum())
+    mb_fp = int(((mb_preds == 1) & (mb_test_labels[mb_decisive] == 0)).sum())
+    mb_tn = int(((mb_preds == 0) & (mb_test_labels[mb_decisive] == 0)).sum())
+    mb_fn = int(((mb_preds == 0) & (mb_test_labels[mb_decisive] == 1)).sum())
+
+    # -------------------------------------------------------------
+    # Model 2: DINOv2 ViT-S/14 (384-d)
+    # -------------------------------------------------------------
+    print(f"\n[3/5] Evaluating DINOv2 ViT-S/14 (384-d)...")
+    dinov2 = torch.hub.load("facebookresearch/dinov2", "dinov2_vits14")
+    dinov2.eval()
+
+    dino_transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+
+    dino_cache: dict[Path, np.ndarray] = {}
+    def get_dino_emb(p: Path) -> np.ndarray | None:
+        if p not in dino_cache:
+            try:
+                img = Image.open(p).convert("RGB")
+                t = dino_transform(img).unsqueeze(0)
+                with torch.no_grad():
+                    feat = dinov2(t)
+                    norm = F.normalize(feat, p=2, dim=1)
+                dino_cache[p] = norm.squeeze(0).numpy()
+            except Exception:
+                return None
+        return dino_cache[p]
+
+    dino_cal_sims, dino_cal_labels, _ = extract_pair_similarities(cal_pairs, get_dino_emb)
+    dino_test_sims, dino_test_labels, dino_test_types = extract_pair_similarities(test_pairs, get_dino_emb)
+
+    dino_gen_sims = dino_cal_sims[dino_cal_labels == 1]
+    dino_imp_sims = dino_cal_sims[dino_cal_labels == 0]
+
+    dino_thr_cnt = float(np.percentile(dino_gen_sims, 5.0))
+    dino_thr_gen = float(np.percentile(dino_imp_sims, 95.0))
+
+    platt_dino = PlattCalibrator()
+    platt_dino.fit(dino_cal_sims, dino_cal_labels)
+
+    dino_fpr_all, dino_tpr_all, dino_thr_all, dino_auc_all = compute_roc(dino_test_labels, dino_test_sims)
+    mask_hard_d = (dino_test_labels == 1) | (dino_test_types == "hard_negative")
+    _, _, _, dino_auc_hard = compute_roc(dino_test_labels[mask_hard_d], dino_test_sims[mask_hard_d])
+    mask_rand_d = (dino_test_labels == 1) | (dino_test_types == "random_impostor")
+    _, _, _, dino_auc_rand = compute_roc(dino_test_labels[mask_rand_d], dino_test_sims[mask_rand_d])
+
+    dino_far_01, _ = get_far_at_frr(dino_fpr_all, dino_tpr_all, dino_thr_all, 0.01)
+    dino_far_05, _ = get_far_at_frr(dino_fpr_all, dino_tpr_all, dino_thr_all, 0.05)
+    dino_far_10, _ = get_far_at_frr(dino_fpr_all, dino_tpr_all, dino_thr_all, 0.10)
+
+    dino_ece_raw = compute_ece(np.clip(dino_test_sims, 0.0, 1.0), dino_test_labels)
+    dino_cal_probs = platt_dino.predict_proba_array(dino_test_sims)
+    dino_ece_cal = compute_ece(dino_cal_probs, dino_test_labels)
+
+    dino_decisive = (dino_test_sims >= dino_thr_gen) | (dino_test_sims <= dino_thr_cnt)
+    dino_coverage = float(dino_decisive.mean())
+    dino_abstain_rate = 1.0 - dino_coverage
+    dino_preds = np.where(dino_test_sims[dino_decisive] >= dino_thr_gen, 1, 0)
+    dino_decisive_acc = float((dino_preds == dino_test_labels[dino_decisive]).mean())
+
+    dino_tp = int(((dino_preds == 1) & (dino_test_labels[dino_decisive] == 1)).sum())
+    dino_fp = int(((dino_preds == 1) & (dino_test_labels[dino_decisive] == 0)).sum())
+    dino_tn = int(((dino_preds == 0) & (dino_test_labels[dino_decisive] == 0)).sum())
+    dino_fn = int(((dino_preds == 0) & (dino_test_labels[dino_decisive] == 1)).sum())
+
+    # -------------------------------------------------------------
+    # 4. Generate Figures
+    # -------------------------------------------------------------
+    print(f"\n[4/5] Generating Artifacts and Plots...")
     art_dir = REPO_ROOT / "ml" / "image_signal" / "artifacts"
     art_dir.mkdir(parents=True, exist_ok=True)
 
     # (a) ROC Plot
     fig, ax = plt.subplots(figsize=(6, 5), dpi=150)
-    ax.plot(fpr_all, tpr_all, label=f"All Impostors (AUC = {auc_all:.4f})", color="#2563eb", lw=2)
-    ax.plot(fpr_hard, tpr_hard, label=f"Hard Negatives (AUC = {auc_hard:.4f})", color="#dc2626", lw=1.5, ls="--")
-    ax.plot(fpr_rand, tpr_rand, label=f"Random Impostors (AUC = {auc_rand:.4f})", color="#16a34a", lw=1.5, ls=":")
+    ax.plot(mb_fpr_all, mb_tpr_all, label=f"MobileNetV2 All (AUC = {mb_auc_all:.4f})", color="#2563eb", lw=2)
+    ax.plot(mb_fpr_hard, mb_tpr_hard, label=f"MobileNetV2 Hard Neg (AUC = {mb_auc_hard:.4f})", color="#dc2626", lw=1.5, ls="--")
+    ax.plot(mb_fpr_rand, mb_tpr_rand, label=f"MobileNetV2 Rand Imp (AUC = {mb_auc_rand:.4f})", color="#16a34a", lw=1.5, ls=":")
+    ax.plot(dino_fpr_all, dino_tpr_all, label=f"DINOv2 All (AUC = {dino_auc_all:.4f})", color="#7c3aed", lw=2)
     ax.plot([0, 1], [0, 1], color="gray", ls="--", lw=1)
     ax.set_xlabel("False Positive Rate (FAR)")
     ax.set_ylabel("True Positive Rate (1 - FRR)")
-    ax.set_title("MobileNetV2 Image Verification ROC Curve (SOP Test Split)")
-    ax.legend(loc="lower right")
+    ax.set_title("Image Verification ROC Curve (SOP Test Split)")
+    ax.legend(loc="lower right", fontsize=8)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     fig.savefig(art_dir / "roc_curve.png")
     plt.close(fig)
 
-    # (b) Coverage vs Accuracy Plot
+    # (b) Coverage vs Accuracy Plot for MobileNetV2
+    margins = np.linspace(0.0, 0.25, 25)
+    cov_acc_curve = []
+    base_center = (mb_thr_gen + mb_thr_cnt) / 2.0
+    for m in margins:
+        t_high = min(base_center + m, 0.95)
+        t_low = max(base_center - m, 0.05)
+        abstain_m = (mb_test_sims > t_low) & (mb_test_sims < t_high)
+        cov = 1.0 - float(abstain_m.mean())
+        dec = ~abstain_m
+        acc = float((np.where(mb_test_sims[dec] >= t_high, 1, 0) == mb_test_labels[dec]).mean()) if dec.any() else 1.0
+        cov_acc_curve.append({"margin": round(float(m), 4), "coverage": round(cov, 4), "accuracy": round(acc, 4)})
+
     fig, ax = plt.subplots(figsize=(6, 5), dpi=150)
     covs = [r["coverage"] * 100 for r in cov_acc_curve]
     accs = [r["accuracy"] * 100 for r in cov_acc_curve]
     ax.plot(covs, accs, marker="o", color="#7c3aed", lw=2)
-    ax.axvline(frozen_cov * 100, color="#dc2626", ls="--", label=f"Operating Point ({frozen_cov*100:.1f}% cov, {frozen_acc*100:.1f}% acc)")
+    ax.axvline(mb_coverage * 100, color="#dc2626", ls="--", label=f"Calibrated ({mb_coverage*100:.1f}% cov, {mb_decisive_acc*100:.1f}% acc)")
     ax.set_xlabel("Decision Coverage (%)")
     ax.set_ylabel("Classification Accuracy Outside Abstain Band (%)")
     ax.set_title("Coverage vs Accuracy Under Abstain Region")
@@ -322,53 +373,106 @@ def run_pipeline(sop_root_str: str | None = None, n_calib_classes: int = 150, n_
     fig.savefig(art_dir / "coverage_vs_accuracy.png")
     plt.close(fig)
 
-    # Save thresholds json
+    # (c) Backbone Comparison Bar Chart
+    fig, ax = plt.subplots(figsize=(7, 4.5), dpi=150)
+    metrics_names = ["ROC-AUC", "FAR @ FRR 5%", "Coverage", "Decisive Acc"]
+    mb_vals = [mb_auc_all, mb_far_05, mb_coverage, mb_decisive_acc]
+    dino_vals = [dino_auc_all, dino_far_05, dino_coverage, dino_decisive_acc]
+    x = np.arange(len(metrics_names))
+    width = 0.35
+    ax.bar(x - width/2, mb_vals, width, label="MobileNetV2 (1280-d)", color="#3b82f6")
+    ax.bar(x + width/2, dino_vals, width, label="DINOv2 ViT-S/14 (384-d)", color="#8b5cf6")
+    ax.set_ylabel("Score / Rate")
+    ax.set_title("Backbone Comparison on Stanford Online Products Test Split")
+    ax.set_xticks(x)
+    ax.set_xticklabels(metrics_names)
+    ax.set_ylim(0.0, 1.05)
+    ax.legend(loc="upper right")
+    ax.grid(True, alpha=0.3, axis="y")
+    for i in range(len(metrics_names)):
+        ax.text(x[i] - width/2, mb_vals[i] + 0.02, f"{mb_vals[i]:.2f}", ha="center", fontsize=8)
+        ax.text(x[i] + width/2, dino_vals[i] + 0.02, f"{dino_vals[i]:.2f}", ha="center", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(art_dir / "backbone_comparison.png")
+    plt.close(fig)
+
+    # -------------------------------------------------------------
+    # 5. Save Results and Threshold JSON Files
+    # -------------------------------------------------------------
+    print(f"\n[5/5] Writing JSON artifacts...")
     thresholds_dict = {
-        "genuine_threshold": round(float(thr_gen), 4),
-        "counterfeit_threshold": round(float(thr_cnt), 4),
-        "platt_scale_a": round(float(platt.a), 4),
-        "platt_bias_b": round(float(platt.b), 4),
+        "genuine_threshold": round(mb_thr_gen, 4),
+        "counterfeit_threshold": round(mb_thr_cnt, 4),
+        "platt_scale_a": round(float(platt_mb.a), 4),
+        "platt_bias_b": round(float(platt_mb.b), 4),
         "calibration_frr_target": 0.05,
+        "calibration_far_target": 0.05,
+        "single_operating_threshold_frr05": round(mb_single_opt_thr, 4),
+        "dinov2_genuine_threshold": round(dino_thr_gen, 4),
+        "dinov2_counterfeit_threshold": round(dino_thr_cnt, 4),
     }
     with open(art_dir / "image_thresholds.json", "w", encoding="utf-8") as f:
         json.dump(thresholds_dict, f, indent=2)
 
-    # Save summary results json
     results_dict = {
         "dataset": "Stanford Online Products",
         "model": "MobileNetV2 (ImageNet Pretrained, 1280-d)",
         "test_pairs_evaluated": len(test_pairs),
-        "auc_all_impostors": round(auc_all, 4),
-        "auc_hard_negatives": round(auc_hard, 4),
-        "auc_random_impostors": round(auc_rand, 4),
-        "far_at_frr_01": {"target_frr": 0.01, "far": round(far_01, 4), "threshold": round(thr_01, 4)},
-        "far_at_frr_05": {"target_frr": 0.05, "far": round(far_05, 4), "threshold": round(thr_05, 4)},
-        "far_at_frr_10": {"target_frr": 0.10, "far": round(far_10, 4), "threshold": round(thr_10, 4)},
-        "ece_raw": round(ece_before, 4),
-        "ece_platt_calibrated": round(ece_after, 4),
-        "ece_reduction_pct": round((ece_before - ece_after) / ece_before * 100, 2),
-        "frozen_decision_coverage": round(frozen_cov, 4),
-        "frozen_accuracy": round(frozen_acc, 4),
-        "abstain_rate": round(1.0 - frozen_cov, 4),
+        "auc_all_impostors": round(mb_auc_all, 4),
+        "auc_hard_negatives": round(mb_auc_hard, 4),
+        "auc_random_impostors": round(mb_auc_rand, 4),
+        "far_at_frr_01": {"target_frr": 0.01, "far": round(mb_far_01, 4), "threshold": round(mb_t01, 4)},
+        "far_at_frr_05": {"target_frr": 0.05, "far": round(mb_far_05, 4), "threshold": round(mb_t05, 4)},
+        "far_at_frr_10": {"target_frr": 0.10, "far": round(mb_far_10, 4), "threshold": round(mb_t10, 4)},
+        "ece_raw": round(mb_ece_raw, 4),
+        "ece_platt_calibrated": round(mb_ece_cal, 4),
+        "ece_reduction_pct": round((mb_ece_raw - mb_ece_cal) / mb_ece_raw * 100, 2),
+        "single_threshold_binary_accuracy": round(mb_single_acc, 4),
+        "frozen_decision_coverage": round(mb_coverage, 4),
+        "frozen_accuracy": round(mb_decisive_acc, 4),
+        "abstain_rate": round(mb_abstain_rate, 4),
+        "confusion_matrix": {"tp": mb_tp, "fp": mb_fp, "tn": mb_tn, "fn": mb_fn},
+        "stronger_backbone_comparison": {
+            "model": "DINOv2 ViT-S/14 (384-d)",
+            "auc_all_impostors": round(dino_auc_all, 4),
+            "auc_hard_negatives": round(dino_auc_hard, 4),
+            "auc_random_impostors": round(dino_auc_rand, 4),
+            "far_at_frr_01": round(dino_far_01, 4),
+            "far_at_frr_05": round(dino_far_05, 4),
+            "far_at_frr_10": round(dino_far_10, 4),
+            "ece_raw": round(dino_ece_raw, 4),
+            "ece_platt_calibrated": round(dino_ece_cal, 4),
+            "frozen_decision_coverage": round(dino_coverage, 4),
+            "frozen_accuracy": round(dino_decisive_acc, 4),
+            "abstain_rate": round(dino_abstain_rate, 4),
+            "confusion_matrix": {"tp": dino_tp, "fp": dino_fp, "tn": dino_tn, "fn": dino_fn},
+        }
     }
     with open(art_dir / "sop_eval_results.json", "w", encoding="utf-8") as f:
         json.dump(results_dict, f, indent=2)
 
-    # Print summary table
+    # Print summary
     print("\n" + "=" * 70)
     print("SOP EVALUATION METRICS SUMMARY (FROZEN TEST SPLIT)")
     print("=" * 70)
     print(f"  Test image pairs evaluated:         {len(test_pairs)}")
-    print(f"  ROC-AUC (All Impostors):            {auc_all:.4f}")
-    print(f"  ROC-AUC (Hard Negatives):           {auc_hard:.4f}")
-    print(f"  ROC-AUC (Random Impostors):         {auc_rand:.4f}")
-    print(f"  FAR @ FRR = 1%:                     {far_01:.4f} (thr={thr_01:.4f})")
-    print(f"  FAR @ FRR = 5%:                     {far_05:.4f} (thr={thr_05:.4f})")
-    print(f"  FAR @ FRR = 10%:                    {far_10:.4f} (thr={thr_10:.4f})")
-    print(f"  ECE Before Calibration (raw sim):   {ece_before:.4f}")
-    print(f"  ECE After Platt Calibration:        {ece_after:.4f} ({results_dict['ece_reduction_pct']}% error reduction)")
-    print(f"  Abstain Band Coverage:              {frozen_cov*100:.1f}%")
-    print(f"  Accuracy Outside Abstain Band:      {frozen_acc*100:.1f}%")
+    print(f"  --- MobileNetV2 (1280-d) ---")
+    print(f"    ROC-AUC (All Impostors):            {mb_auc_all:.4f}")
+    print(f"    ROC-AUC (Hard Negatives):           {mb_auc_hard:.4f}")
+    print(f"    ROC-AUC (Random Impostors):         {mb_auc_rand:.4f}")
+    print(f"    FAR @ FRR = 5%:                     {mb_far_05:.4f}")
+    print(f"    Single Operating Accuracy (no abs): {mb_single_acc*100:.2f}%")
+    print(f"    Abstain Band Coverage:              {mb_coverage*100:.2f}% ({mb_decisive.sum()}/{len(test_pairs)})")
+    print(f"    Abstain Rate:                       {mb_abstain_rate*100:.2f}%")
+    print(f"    Accuracy on Decisive Pairs:         {mb_decisive_acc*100:.2f}% (TP={mb_tp}, FP={mb_fp}, TN={mb_tn}, FN={mb_fn})")
+    print(f"  --- DINOv2 ViT-S/14 (384-d) ---")
+    print(f"    ROC-AUC (All Impostors):            {dino_auc_all:.4f}")
+    print(f"    ROC-AUC (Hard Negatives):           {dino_auc_hard:.4f}")
+    print(f"    ROC-AUC (Random Impostors):         {dino_auc_rand:.4f}")
+    print(f"    FAR @ FRR = 5%:                     {dino_far_05:.4f}")
+    print(f"    Abstain Band Coverage:              {dino_coverage*100:.2f}% ({dino_decisive.sum()}/{len(test_pairs)})")
+    print(f"    Abstain Rate:                       {dino_abstain_rate*100:.2f}%")
+    print(f"    Accuracy on Decisive Pairs:         {dino_decisive_acc*100:.2f}% (TP={dino_tp}, FP={dino_fp}, TN={dino_tn}, FN={dino_fn})")
     print("=" * 70)
     print(f"Artifacts saved in: {art_dir}")
 

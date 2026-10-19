@@ -185,12 +185,14 @@ def generate_overview_markdown() -> str:
     ece_raw = sop_results.get("ece_raw", 0.1337)
     ece_cal = sop_results.get("ece_platt_calibrated", 0.0505)
     ece_red = sop_results.get("ece_reduction_pct", 62.24)
-    frozen_cov = sop_results.get("frozen_decision_coverage", 0.6302)
-    frozen_acc = sop_results.get("frozen_accuracy", 0.5013)
-    abstain_rate = sop_results.get("abstain_rate", 0.3698)
+    single_acc = sop_results.get("single_threshold_binary_accuracy", 0.6874)
+    frozen_cov = sop_results.get("frozen_decision_coverage", 0.6117)
+    frozen_acc = sop_results.get("frozen_accuracy", 0.9229)
+    abstain_rate = sop_results.get("abstain_rate", 0.3883)
 
-    v_genuine_thresh = img_thresholds.get("genuine_threshold", 0.2401)
-    v_counterfeit_thresh = img_thresholds.get("counterfeit_threshold", 0.0401)
+    v_genuine_thresh = img_thresholds.get("genuine_threshold", 0.5100)
+    v_counterfeit_thresh = img_thresholds.get("counterfeit_threshold", 0.2402)
+    dino_results = sop_results.get("stronger_backbone_comparison", {})
 
     md = f"""# Anti-Counterfeiting Prototype: Comprehensive System Overview
 
@@ -360,18 +362,18 @@ Implemented in `backend/app/fusion.py` (Rule Priority Order 1 to 10):
 
 ---
 
-## 8. Auxiliary Visual Consistency Verification (MobileNetV2)
+## 8. Auxiliary Visual Consistency Verification & Backbone Comparison
 
 Implemented in `ml/image_signal/embedder.py` and evaluated in `ml/image_signal/evaluate_sop.py`:
 
-- **Backbone Architecture:** MobileNetV2 pretrained on ImageNet (1280-d unit-length feature embedding).
-- **Evaluation Dataset:** Stanford Online Products (SOP) — `{sop_pairs}` test pairs evaluated.
+- **Backbone Architecture:** MobileNetV2 pretrained on ImageNet (1280-d unit-length feature embedding) and DINOv2 ViT-S/14 (384-d self-supervised).
+- **Evaluation Dataset:** Stanford Online Products (SOP) — `{sop_pairs}` test pairs evaluated on product-disjoint test split (`Ebay_test.txt`).
 - **Discrimination Thresholds (`ml/image_signal/artifacts/image_thresholds.json`):**
-  - Genuine threshold: $S_C \ge {v_genuine_thresh:.4f}$
-  - Counterfeit threshold: $S_C \le {v_counterfeit_thresh:.4f}$
-  - Abstain band: ${v_counterfeit_thresh:.4f} < S_C < {v_genuine_thresh:.4f}$
+  - Genuine threshold (FAR $\le$ 5% on validation): $S_C \ge {v_genuine_thresh:.4f}$
+  - Counterfeit threshold (FRR $\le$ 5% on validation): $S_C \le {v_counterfeit_thresh:.4f}$
+  - Calibrated abstain band: ${v_counterfeit_thresh:.4f} < S_C < {v_genuine_thresh:.4f}$
 
-### 8.1 Empirical Visual Evaluation Results
+### 8.1 Empirical Visual Evaluation Results (MobileNetV2)
 *Generated directly from `ml/image_signal/artifacts/sop_eval_results.json`:*
 
 | Metric | Measured Value | Meaning & Context |
@@ -385,14 +387,25 @@ Implemented in `ml/image_signal/embedder.py` and evaluated in `ml/image_signal/e
 | **Raw ECE** | {ece_raw:.4f} | Expected Calibration Error before Platt scaling |
 | **Calibrated ECE** | {ece_cal:.4f} | Expected Calibration Error after Platt scaling |
 | **ECE Error Reduction** | {ece_red:.2f}% | Calibration improvement via logistic regression |
+| **Single-Threshold Accuracy (no abstain)** | {single_acc:.4f} ({single_acc * 100:.1f}%) | Binary decision at FRR = 5% operating point |
 | **Decision Coverage** | {frozen_cov:.4f} ({frozen_cov * 100:.1f}%) | Fraction of test pairs outside the abstain band |
 | **Abstain Rate** | {abstain_rate:.4f} ({abstain_rate * 100:.1f}%) | Fraction of ambiguous pairs deferred |
-| **Frozen Decision Accuracy** | **{frozen_acc:.4f} ({frozen_acc * 100:.1f}%)** | Accuracy on non-abstaining pairs |
+| **Decisive Pair Accuracy** | **{frozen_acc:.4f} ({frozen_acc * 100:.1f}%)** | Accuracy on non-abstaining pairs |
 
-### 8.2 Explanation of the Frozen Accuracy (~0.50)
-The frozen accuracy on non-abstaining pairs is **{frozen_acc * 100:.2f}%**, essentially random chance on a balanced binary task. This occurs because the MobileNetV2 backbone is frozen on generic ImageNet features without domain-specific metric learning (e.g. triplet or contrastive fine-tuning on Stanford Online Products). 
+### 8.2 Investigation and Resolution of Initial 0.5013 Frozen Accuracy
+In early iterations, frozen decision accuracy was reported at **50.13%**, appearing inconsistent with the strong ROC-AUC of 0.9115. Root cause analysis revealed an asymmetric thresholding bug:
+- The genuine threshold was selected at tau_gen = 0.2401 (FRR 5%), but the counterfeit threshold was set via an arbitrary subtraction tau_cnt = tau_gen - 0.20 = 0.0401.
+- Because impostor cosine similarities on generic visual features have minimum similarity ~0.0425 and mean 0.238, **no negative pairs ever fell below 0.0401**.
+- Consequently, 100% of non-abstaining pairs were predicted as genuine (1), collapsing accuracy on a balanced test set to exactly 50.13%.
+- Selecting thresholds symmetrically from the validation ROC curve (counterfeit at validation FRR <= 5% (tau_cnt = 0.2402) and genuine at validation FAR <= 5% (tau_gen = 0.5100)) resolves the defect: non-abstaining accuracy is measured at **{frozen_acc * 100:.2f}%** at {frozen_cov * 100:.1f}% coverage.
 
-This empirical finding validates our core architectural decision: **the visual image signal is treated strictly as an auxiliary, non-blocking 4th signal with an explicit abstain band** (`Rule 9` maps counterfeits to `Manual review`, never outright rejection). The primary security guarantees remain anchored in Layer 1 cryptographic identity and Layer 2 spatio-temporal behavioral modeling.
+### 8.3 Backbone Comparison: MobileNetV2 vs DINOv2 ViT-S/14
+*Generated directly from `ml/image_signal/artifacts/sop_eval_results.json`:*
+
+| Backbone | Embedding Dim | ROC-AUC (All) | ROC-AUC (Hard) | FAR @ FRR 5% | Decision Coverage | Abstain Rate | Decisive Accuracy |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **MobileNetV2** (ImageNet Pretrained) | 1280-d | {auc_all:.4f} | {auc_hard:.4f} | {far_05:.4f} | {frozen_cov * 100:.1f}% | {abstain_rate * 100:.1f}% | **{frozen_acc * 100:.1f}%** |
+| **DINOv2 ViT-S/14** (Self-Supervised) | 384-d | {dino_results.get('auc_all_impostors', 0.9293):.4f} | {dino_results.get('auc_hard_negatives', 0.8797):.4f} | {dino_results.get('far_at_frr_05', 0.3081):.4f} | {dino_results.get('frozen_decision_coverage', 0.6953) * 100:.1f}% | {dino_results.get('abstain_rate', 0.3047) * 100:.1f}% | **{dino_results.get('frozen_accuracy', 0.9354) * 100:.1f}%** |
 
 ---
 

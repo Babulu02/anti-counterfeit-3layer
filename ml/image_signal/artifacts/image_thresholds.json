@@ -1,7 +1,11 @@
 {
-  "genuine_threshold": 0.2401,
-  "counterfeit_threshold": 0.0401,
+  "genuine_threshold": 0.51,
+  "counterfeit_threshold": 0.2402,
   "platt_scale_a": 8.0245,
   "platt_bias_b": -3.7986,
-  "calibration_frr_target": 0.05
+  "calibration_frr_target": 0.05,
+  "calibration_far_target": 0.05,
+  "single_operating_threshold_frr05": 0.2402,
+  "dinov2_genuine_threshold": 0.5289,
+  "dinov2_counterfeit_threshold": 0.1515
 }

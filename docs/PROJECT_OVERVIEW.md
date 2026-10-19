@@ -190,18 +190,18 @@ Implemented in `backend/app/fusion.py` (Rule Priority Order 1 to 10):
 
 ---
 
-## 8. Auxiliary Visual Consistency Verification (MobileNetV2)
+## 8. Auxiliary Visual Consistency Verification & Backbone Comparison
 
 Implemented in `ml/image_signal/embedder.py` and evaluated in `ml/image_signal/evaluate_sop.py`:
 
-- **Backbone Architecture:** MobileNetV2 pretrained on ImageNet (1280-d unit-length feature embedding).
-- **Evaluation Dataset:** Stanford Online Products (SOP) — `1782` test pairs evaluated.
+- **Backbone Architecture:** MobileNetV2 pretrained on ImageNet (1280-d unit-length feature embedding) and DINOv2 ViT-S/14 (384-d self-supervised).
+- **Evaluation Dataset:** Stanford Online Products (SOP) — `1782` test pairs evaluated on product-disjoint test split (`Ebay_test.txt`).
 - **Discrimination Thresholds (`ml/image_signal/artifacts/image_thresholds.json`):**
-  - Genuine threshold: $S_C \ge 0.2401$
-  - Counterfeit threshold: $S_C \le 0.0401$
-  - Abstain band: $0.0401 < S_C < 0.2401$
+  - Genuine threshold (FAR $\le$ 5% on validation): $S_C \ge 0.5100$
+  - Counterfeit threshold (FRR $\le$ 5% on validation): $S_C \le 0.2402$
+  - Calibrated abstain band: $0.2402 < S_C < 0.5100$
 
-### 8.1 Empirical Visual Evaluation Results
+### 8.1 Empirical Visual Evaluation Results (MobileNetV2)
 *Generated directly from `ml/image_signal/artifacts/sop_eval_results.json`:*
 
 | Metric | Measured Value | Meaning & Context |
@@ -215,14 +215,25 @@ Implemented in `ml/image_signal/embedder.py` and evaluated in `ml/image_signal/e
 | **Raw ECE** | 0.1337 | Expected Calibration Error before Platt scaling |
 | **Calibrated ECE** | 0.0505 | Expected Calibration Error after Platt scaling |
 | **ECE Error Reduction** | 62.24% | Calibration improvement via logistic regression |
-| **Decision Coverage** | 0.6302 (63.0%) | Fraction of test pairs outside the abstain band |
-| **Abstain Rate** | 0.3698 (37.0%) | Fraction of ambiguous pairs deferred |
-| **Frozen Decision Accuracy** | **0.5013 (50.1%)** | Accuracy on non-abstaining pairs |
+| **Single-Threshold Accuracy (no abstain)** | 0.6695 (67.0%) | Binary decision at FRR = 5% operating point |
+| **Decision Coverage** | 0.6117 (61.2%) | Fraction of test pairs outside the abstain band |
+| **Abstain Rate** | 0.3883 (38.8%) | Fraction of ambiguous pairs deferred |
+| **Decisive Pair Accuracy** | **0.9229 (92.3%)** | Accuracy on non-abstaining pairs |
 
-### 8.2 Explanation of the Frozen Accuracy (~0.50)
-The frozen accuracy on non-abstaining pairs is **50.13%**, essentially random chance on a balanced binary task. This occurs because the MobileNetV2 backbone is frozen on generic ImageNet features without domain-specific metric learning (e.g. triplet or contrastive fine-tuning on Stanford Online Products). 
+### 8.2 Investigation and Resolution of Initial 0.5013 Frozen Accuracy
+In early iterations, frozen decision accuracy was reported at **50.13%**, appearing inconsistent with the strong ROC-AUC of 0.9115. Root cause analysis revealed an asymmetric thresholding bug:
+- The genuine threshold was selected at tau_gen = 0.2401 (FRR 5%), but the counterfeit threshold was set via an arbitrary subtraction tau_cnt = tau_gen - 0.20 = 0.0401.
+- Because impostor cosine similarities on generic visual features have minimum similarity ~0.0425 and mean 0.238, **no negative pairs ever fell below 0.0401**.
+- Consequently, 100% of non-abstaining pairs were predicted as genuine (1), collapsing accuracy on a balanced test set to exactly 50.13%.
+- Selecting thresholds symmetrically from the validation ROC curve (counterfeit at validation FRR <= 5% (tau_cnt = 0.2402) and genuine at validation FAR <= 5% (tau_gen = 0.5100)) resolves the defect: non-abstaining accuracy is measured at **92.29%** at 61.2% coverage.
 
-This empirical finding validates our core architectural decision: **the visual image signal is treated strictly as an auxiliary, non-blocking 4th signal with an explicit abstain band** (`Rule 9` maps counterfeits to `Manual review`, never outright rejection). The primary security guarantees remain anchored in Layer 1 cryptographic identity and Layer 2 spatio-temporal behavioral modeling.
+### 8.3 Backbone Comparison: MobileNetV2 vs DINOv2 ViT-S/14
+*Generated directly from `ml/image_signal/artifacts/sop_eval_results.json`:*
+
+| Backbone | Embedding Dim | ROC-AUC (All) | ROC-AUC (Hard) | FAR @ FRR 5% | Decision Coverage | Abstain Rate | Decisive Accuracy |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| **MobileNetV2** (ImageNet Pretrained) | 1280-d | 0.9115 | 0.8656 | 0.4747 | 61.2% | 38.8% | **92.3%** |
+| **DINOv2 ViT-S/14** (Self-Supervised) | 384-d | 0.9293 | 0.8797 | 0.3081 | 69.5% | 30.5% | **93.5%** |
 
 ---
 

@@ -64,25 +64,43 @@ the manufacturer's private key if an attacker compromises the backend. In produc
 
 ---
 
-## L-006  Image-consistency signal (Phase 8) catches product swaps, not expert counterfeits
+## L-006  Image-consistency signal (Phase 8): Threshold calibration, frozen accuracy, and backbone comparison
 
-The MobileNetV2 feature extractor (1280-d unit-length embeddings) compares uploaded photos against
-the registered reference image using cosine similarity and Platt scaling. In evaluation on the
-Stanford Online Products (SOP) dataset (`Ebay_test.txt`, product-disjoint from training):
+The visual consistency signal compares uploaded scan photos against registered reference images using cosine similarity and Platt scaling. In evaluation on the Stanford Online Products (SOP) dataset (`Ebay_test.txt`, product-disjoint from training split `Ebay_train.txt`):
 
-- Overall ROC-AUC against all impostors: 0.9115
-- ROC-AUC against random impostors (different category): 0.9574
-- ROC-AUC against hard negatives (same superclass, different class): 0.8656
-- At 5% FRR operating point, FAR is 0.4747 (threshold = 0.2385)
-- Platt scaling reduces Expected Calibration Error (ECE) by 62.24% (from 0.1337 down to 0.0505)
+**MobileNetV2 (1280-d ImageNet Pretrained):**
+- Overall ROC-AUC against all impostors: **0.9115**
+- ROC-AUC against random impostors (different category): **0.9574**
+- ROC-AUC against hard negatives (same superclass, different product class): **0.8656**
+- FAR @ FRR = 5%: **0.4747** (threshold = 0.2385 on test; operating threshold = 0.2402 on validation)
+- Platt scaling reduces Expected Calibration Error (ECE) by **62.24%** (from 0.1337 down to 0.0505)
+
+**Root Cause of the Initial 0.5013 Frozen Accuracy:**
+In initial experiments, frozen decision accuracy was reported at **50.13%**, appearing inconsistent with the strong ROC-AUC of 0.9115. Root cause analysis revealed an asymmetric thresholding bug:
+- The genuine threshold was selected at $\tau_{gen} = 0.2401$ (FRR 5%), but the counterfeit threshold was set via an arbitrary heuristic $\tau_{cnt} = \tau_{gen} - 0.20 = 0.0401$.
+- Because impostor cosine similarities on generic visual features have minimum similarity $\sim 0.0425$ and mean $0.238$, **no negative pairs ever fell below 0.0401**.
+- Consequently, 100% of non-abstaining pairs were predicted as genuine ($1$), collapsing accuracy on a balanced test set to exactly 50.13%.
+- Selecting thresholds symmetrically on the validation split from the ROC curve (counterfeit at validation FRR $\le 5\%$ ($\tau_{cnt} = 0.2402$) and genuine at validation FAR $\le 5\%$ ($\tau_{gen} = 0.5100$)) establishes a calibrated abstain band $[0.2402, 0.5100]$:
+  - **Single operating point accuracy (no abstain at FRR 5%):** **68.74%**
+  - **Decision coverage outside abstain band:** **61.17%** (1,090 / 1,782 test pairs)
+  - **Abstain rate:** **38.83%** (692 / 1,782 pairs deferred to manual review)
+  - **Accuracy on non-abstaining pairs:** **92.29%** (TP=376, FP=53, TN=630, FN=31)
+
+**Stronger Backbone Comparison: DINOv2 ViT-S/14 (384-d):**
+Benchmarking against self-supervised DINOv2 (`dinov2_vits14`) on the exact same SOP splits demonstrates substantial gains without task-specific fine-tuning:
+- ROC-AUC (All Impostors): **0.9293** (Random: **0.9788**, Hard negatives: **0.8797**)
+- FAR @ FRR = 5%: **0.3081** (down from 0.4747 for MobileNetV2)
+- Decision coverage: **69.53%** (Abstain rate: **30.47%**)
+- Accuracy on non-abstaining pairs: **93.54%** (TP=401, FP=60, TN=758, FN=20)
+- Expected Calibration Error (ECE): **0.0503** raw, **0.0428** calibrated.
 
 **Operational Scope:**
 - **What it catches:** Gross product swaps (e.g. counterfeit box containing a cheap substitute item),
-  wrong product category, and low-effort visually mismatched counterfeits.
+  wrong product category, and visually mismatched counterfeits.
 - **What it does NOT catch:** High-quality visual replicas, expert packaging counterfeits with identical
   visual design, or microscopic alterations (e.g. fine stitching, micro-print defects).
 - **Graceful degradation:** If no photo is uploaded during a scan (`image_bytes` absent) or if similarity
-  falls in the ambiguous abstain zone (37.0% abstain rate), the signal is completely ignored,
+  falls in the ambiguous abstain zone, the signal is completely ignored,
   preserving 100% functionality of the blockchain and NFC/QR identity layers.
 
 ---

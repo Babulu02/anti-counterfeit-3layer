@@ -12,8 +12,8 @@ import json
 from pathlib import Path
 
 # Calibrated thresholds (frozen from Stanford Online Products evaluation)
-GENUINE_THRESHOLD     = 0.2401
-COUNTERFEIT_THRESHOLD = 0.0401
+GENUINE_THRESHOLD     = 0.5100
+COUNTERFEIT_THRESHOLD = 0.2402
 PLATT_SCALE_A         = 8.0245
 PLATT_BIAS_B          = -3.7986
 
