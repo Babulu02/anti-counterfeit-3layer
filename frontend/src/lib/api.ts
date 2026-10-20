@@ -49,6 +49,8 @@ export interface ScanResponse {
   sold:            boolean;
   chain_tx:        string | null;
   product_id:      string;
+  image_result?:     string | null;
+  image_similarity?: number | null;
 }
 
 export interface ScanOut {

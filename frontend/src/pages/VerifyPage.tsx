@@ -23,6 +23,8 @@ export default function VerifyPage() {
   // Image signal (Phase 8)
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Verification state
   const [loading, setLoading] = useState(false);
@@ -110,13 +112,29 @@ export default function VerifyPage() {
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please select a valid image file (PNG, JPG, WebP).");
+      return;
+    }
     setImageFile(file);
     const reader = new FileReader();
     reader.onload = () => {
-      const b64 = (reader.result as string).split(",")[1];
+      const full = reader.result as string;
+      setImagePreview(full);
+      const b64 = full.split(",")[1];
       setImageBase64(b64);
     };
     reader.readAsDataURL(file);
+    setError(null);
+  }
+
+  function removeImage() {
+    setImageFile(null);
+    setImageBase64(null);
+    setImagePreview(null);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
   }
 
   async function handleVerify(e: React.FormEvent) {
@@ -358,6 +376,74 @@ export default function VerifyPage() {
             )}
           </div>
 
+          {/* Layer 2: Visual Physical Verification (Stolen Tag / Refill Protection) */}
+          <div className="pt-3 border-t border-[#26384B]/60 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-semibold text-[#F1F6FC] flex items-center gap-2">
+                  <span>📸</span> Layer 2: Physical Product Photo (Detect Stolen QR/NFC Tags)
+                </h4>
+                <p className="text-[11px] text-[#9BAFC5] mt-0.5">
+                  Protects against Tag Reapplication attacks. If a genuine tag was peeled or stolen and stuck on a fake item, MobileNetV2 verifies texture and packaging features.
+                </p>
+              </div>
+              {imageFile && (
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="text-[11px] text-[#EF4444] hover:underline"
+                >
+                  Remove Photo
+                </button>
+              )}
+            </div>
+
+            {!imagePreview ? (
+              <label className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-[#26384B] hover:border-[#00BFFF]/50 bg-[#080D14]/50 cursor-pointer transition group">
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#00BFFF]/10 border border-[#00BFFF]/20 flex items-center justify-center text-[#00BFFF] group-hover:scale-105 transition">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#F1F6FC] group-hover:text-[#00BFFF] transition">
+                      Upload or Snap Product Photo
+                    </p>
+                    <p className="text-[10px] text-[#5B708B]">
+                      Optional: checks MobileNetV2 embedding vs. registered on-chain asset
+                    </p>
+                  </div>
+                </div>
+              </label>
+            ) : (
+              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#080D14] border border-[#26384B]">
+                <img
+                  src={imagePreview}
+                  alt="Product preview"
+                  className="w-14 h-14 object-cover rounded-lg border border-[#26384B]"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-mono text-[#F1F6FC] truncate">
+                    {imageFile?.name}
+                  </p>
+                  <p className="text-[10px] text-[#10B981] font-mono mt-0.5">
+                    Ready for cosine similarity comparison
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {error && (
             <div className="p-3 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-xs">
               {error}
@@ -429,8 +515,33 @@ export default function VerifyPage() {
                   value={result.identity_result}
                   ok={result.identity_result === "valid"}
                 />
+                {result.image_result && (
+                  <>
+                    <SignalRow
+                      label="Layer 2: Visual Physical Match"
+                      value={
+                        result.image_result === "genuine"
+                          ? "Genuine Packaging"
+                          : result.image_result === "counterfeit"
+                          ? "Counterfeit / Altered Packaging"
+                          : result.image_result === "uncertain"
+                          ? "Uncertain (Abstained)"
+                          : "No Image Provided"
+                      }
+                      ok={result.image_result === "genuine" || result.image_result === "uncertain"}
+                    />
+                    {result.image_similarity !== undefined && result.image_similarity !== null && (
+                      <SignalRow
+                        label="Visual Cosine Similarity"
+                        value={`${(result.image_similarity * 100).toFixed(1)}% (Threshold: 51%)`}
+                        ok={result.image_similarity >= 0.2402}
+                        mono={true}
+                      />
+                    )}
+                  </>
+                )}
                 <SignalRow
-                  label="Layer 2: ML Anomaly Score"
+                  label="Layer 3: ML Anomaly Score"
                   value={result.risk_score !== null ? result.risk_score.toFixed(3) : "—"}
                   ok={result.risk_score === null || result.risk_score < 0.23}
                 />
