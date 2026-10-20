@@ -17,6 +17,20 @@ Images are stored under /data/product-images (off-chain).
 Only SHA-256 hashes go on-chain.  Device IDs are hashed before DB storage.
 """
 
+import os
+import sys
+from pathlib import Path
+
+# Fix Windows Python 3.8+ DLL loading for PyTorch (c10.dll, torch_cpu.dll)
+_TORCH_LIB = Path(__file__).resolve().parents[1] / ".venv" / "Lib" / "site-packages" / "torch" / "lib"
+if _TORCH_LIB.exists() and hasattr(os, "add_dll_directory"):
+    try:
+        os.add_dll_directory(str(_TORCH_LIB))
+    except Exception:
+        pass
+
+import torch
+
 import hashlib
 import io
 import os
