@@ -100,6 +100,12 @@ def fuse(signals: Signals) -> tuple[str, str]:
 
     # ── Rule 1: not on-chain ─────────────────────────────────────────────────
     if not signals.on_chain:
+        if signals.image_result == "counterfeit":
+            detail = signals.image_reason or "deceptive counterfeit packaging detected"
+            return (
+                VERDICT_SUSPICIOUS,
+                f"Product ID not found on-chain AND {detail} — confirmed counterfeit asset.",
+            )
         return (
             VERDICT_UNREGISTERED,
             "Product ID not found on-chain — likely counterfeit or unregistered.",
