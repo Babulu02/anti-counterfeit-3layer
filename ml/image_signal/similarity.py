@@ -11,9 +11,9 @@ import numpy as np
 import json
 from pathlib import Path
 
-# Calibrated thresholds (frozen from Stanford Online Products evaluation)
-GENUINE_THRESHOLD     = 0.5100
-COUNTERFEIT_THRESHOLD = 0.2402
+# Calibrated thresholds (hardened against deceptive brand lookalikes)
+GENUINE_THRESHOLD     = 0.7200
+COUNTERFEIT_THRESHOLD = 0.3500
 PLATT_SCALE_A         = 8.0245
 PLATT_BIAS_B          = -3.7986
 

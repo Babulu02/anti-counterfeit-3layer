@@ -78,6 +78,7 @@ class ScanResponse(BaseModel):
     # Optional Image Signal (Phase 8)
     image_result:     Optional[str]   = None  # "genuine", "counterfeit", "uncertain", "absent"
     image_similarity: Optional[float] = None
+    image_reason:     Optional[str]   = None
 
 
 class ScanOut(BaseModel):

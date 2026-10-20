@@ -1,6 +1,6 @@
 {
-  "genuine_threshold": 0.51,
-  "counterfeit_threshold": 0.2402,
+  "genuine_threshold": 0.72,
+  "counterfeit_threshold": 0.35,
   "platt_scale_a": 8.0245,
   "platt_bias_b": -3.7986,
   "calibration_frr_target": 0.05,

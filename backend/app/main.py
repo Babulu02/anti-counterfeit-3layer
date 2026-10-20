@@ -150,19 +150,54 @@ def _embed_image_safe(data: bytes) -> Optional[np.ndarray]:
         return None
 
 
-def _classify_image_safe(query_bytes: bytes, ref_embedding_bytes: bytes) -> tuple[Optional[str], Optional[float]]:
-    """Safely compute cosine similarity and classify query vs reference embedding."""
+def _classify_image_safe(
+    query_bytes: bytes,
+    ref_embedding_bytes: bytes,
+    target_brand: str = "",
+    target_name: str = "",
+) -> tuple[Optional[str], Optional[float], Optional[str]]:
+    """
+    Safely compute cosine similarity and OCR brand verification.
+    Returns (label, similarity, reason_detail).
+    """
     try:
         from ml.image_signal.embedder import get_embedder
         from ml.image_signal.similarity import cosine_similarity, classify, load_calibrated_thresholds
+        from ml.image_signal.ocr_checker import verify_label_text
+
         query_emb = get_embedder().embed_bytes(query_bytes)
         ref_emb = np.frombuffer(ref_embedding_bytes, dtype=np.float32)
         sim = cosine_similarity(query_emb, ref_emb)
         thr_gen, thr_cnt, _, _ = load_calibrated_thresholds()
         label, _ = classify(sim, thr_gen, thr_cnt)
-        return label, round(float(sim), 4)
-    except Exception:
-        return None, None
+        sim_round = round(float(sim), 4)
+
+        # ── 1. OCR Brand Verification ──
+        ocr_res = verify_label_text(query_bytes, target_brand=target_brand, target_name=target_name)
+        ocr_detail = ocr_res.get("reason", "")
+
+        # If OCR detected a deceptive lookalike (e.g. Bislie vs Bisleri), flag as counterfeit immediately
+        if ocr_res.get("status") == "counterfeit":
+            return "counterfeit", sim_round, ocr_detail
+
+        # If OCR confirmed genuine brand text on packaging and visual similarity is reasonable
+        if ocr_res.get("status") == "genuine" and sim >= 0.60:
+            return "genuine", sim_round, ocr_detail
+
+        # If visual similarity is below counterfeit threshold
+        if label == "counterfeit":
+            return "counterfeit", sim_round, f"Visual similarity {sim_round:.3f} below threshold {thr_cnt:.2f}"
+
+        # If visual similarity is in ambiguous lookalike zone (e.g. 0.35 - 0.72)
+        if label == "uncertain":
+            ambig_msg = f"Visual similarity {sim_round:.3f} in ambiguous lookalike zone ({thr_cnt:.2f}-{thr_gen:.2f})"
+            if ocr_detail:
+                ambig_msg += f"; {ocr_detail}"
+            return "uncertain", sim_round, ambig_msg
+
+        return label, sim_round, ocr_detail or f"Visual similarity {sim_round:.3f} verified"
+    except Exception as exc:
+        return None, None, str(exc)
 
 
 def _save_image(upload: UploadFile) -> tuple[str, str, Optional[bytes]]:
@@ -408,19 +443,27 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
     # ── 3b. New-location detection ───────────────────────────────────────────
     new_loc = is_new_location(product_id, req.lat, req.lon, prior_rows)
 
-    # ── 3c. Optional Image Signal (Phase 8) ──────────────────────────────────
+    # ── 3c. Optional Image Signal (Phase 8 + OCR) ───────────────────────────
     image_result = None
     image_sim = None
+    image_reason = None
     if req.image_bytes:
         try:
             q_bytes = base64.b64decode(req.image_bytes)
             db_prod = get_product_by_pid(db, product_id)
             if db_prod and db_prod.image_embedding:
-                image_result, image_sim = _classify_image_safe(q_bytes, db_prod.image_embedding)
+                image_result, image_sim, image_reason = _classify_image_safe(
+                    q_bytes,
+                    db_prod.image_embedding,
+                    target_brand=db_prod.brand or "",
+                    target_name=db_prod.name or "",
+                )
             else:
                 image_result = "absent"
-        except Exception:
+                image_reason = "No reference image registered for this product"
+        except Exception as exc:
             image_result = "absent"
+            image_reason = f"Image processing error: {exc}"
 
     # ── 4. Fusion verdict ────────────────────────────────────────────────────
     signals = Signals(
@@ -433,6 +476,7 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
         is_new_location  = new_loc,
         image_similarity = image_sim,
         image_result     = image_result,
+        image_reason     = image_reason,
     )
     verdict, reason = fuse(signals)
 
@@ -474,6 +518,7 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
         product_id       = product_id,
         image_result     = image_result,
         image_similarity = image_sim,
+        image_reason     = image_reason,
     )
 
 

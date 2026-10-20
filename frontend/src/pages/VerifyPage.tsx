@@ -523,18 +523,25 @@ export default function VerifyPage() {
                         result.image_result === "genuine"
                           ? "Genuine Packaging"
                           : result.image_result === "counterfeit"
-                          ? "Counterfeit / Altered Packaging"
+                          ? "Counterfeit / Brand Spoofing"
                           : result.image_result === "uncertain"
-                          ? "Uncertain (Abstained)"
+                          ? "Suspicious Lookalike / Ambiguous"
                           : "No Image Provided"
                       }
-                      ok={result.image_result === "genuine" || result.image_result === "uncertain"}
+                      ok={result.image_result === "genuine"}
                     />
+                    {result.image_reason && (
+                      <SignalRow
+                        label="Packaging & Label Audit Detail"
+                        value={result.image_reason}
+                        ok={result.image_result === "genuine"}
+                      />
+                    )}
                     {result.image_similarity !== undefined && result.image_similarity !== null && (
                       <SignalRow
                         label="Visual Cosine Similarity"
-                        value={`${(result.image_similarity * 100).toFixed(1)}% (Threshold: 51%)`}
-                        ok={result.image_similarity >= 0.2402}
+                        value={`${(result.image_similarity * 100).toFixed(1)}% (Genuine Threshold: 72%)`}
+                        ok={result.image_similarity >= 0.72}
                         mono={true}
                       />
                     )}

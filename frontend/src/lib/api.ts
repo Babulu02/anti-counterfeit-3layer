@@ -51,6 +51,7 @@ export interface ScanResponse {
   product_id:      string;
   image_result?:     string | null;
   image_similarity?: number | null;
+  image_reason?:     string | null;
 }
 
 export interface ScanOut {

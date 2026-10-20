@@ -72,6 +72,7 @@ class Signals:
     # Image signal (Phase 8 - optional 4th signal)
     image_similarity: Optional[float] = None
     image_result:     Optional[str]   = None  # "genuine" | "counterfeit" | "uncertain" | "absent"
+    image_reason:     Optional[str]   = None
 
 
 # ── Core fusion logic ─────────────────────────────────────────────────────────
@@ -163,11 +164,14 @@ def fuse(signals: Signals) -> tuple[str, str]:
         )
 
     # ── Rule 9: Image visual mismatch (Phase 8 optional signal) ──────────────
-    if signals.image_result == "counterfeit" and signals.image_similarity is not None:
+    if signals.image_result == "counterfeit":
+        detail = signals.image_reason or (
+            f"similarity={signals.image_similarity:.3f} below threshold"
+            if signals.image_similarity is not None else "physical packaging anomaly"
+        )
         return (
             VERDICT_MANUAL,
-            f"Visual appearance mismatch (similarity={signals.image_similarity:.3f} below counterfeit threshold) — "
-            f"possible product swap or counterfeit packaging.",
+            f"Visual appearance mismatch ({detail}) — possible product swap, lookalike brand or counterfeit packaging.",
         )
 
     # ── Rule 10: all clear ───────────────────────────────────────────────────
