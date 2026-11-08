@@ -9,8 +9,8 @@
  * No secrets live in this file — the frontend only uses public endpoints.
  */
 
-const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
-  ?? "/api";
+const RAW_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
+const BASE = RAW_BASE.replace(/\/+$/, "");
 
 // ── Types matching backend schemas.py ────────────────────────────────────────
 
