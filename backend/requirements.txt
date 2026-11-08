@@ -32,6 +32,9 @@ eth-account==0.14.0
 python-dotenv==1.0.1
 
 # ── ML & Vision (Phase 4 & 8) ────────────────────────────────────────────────
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.2.0
+torchvision>=0.17.0
 scikit-learn==1.4.2
 pandas==2.2.2
 numpy==1.26.4

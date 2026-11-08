@@ -198,50 +198,69 @@ def _embed_image_safe(data: bytes) -> Optional[np.ndarray]:
 
 def _classify_image_safe(
     query_bytes: bytes,
-    ref_embedding_bytes: bytes,
+    ref_embedding_bytes: Optional[bytes] = None,
     target_brand: str = "",
     target_name: str = "",
 ) -> tuple[Optional[str], Optional[float], Optional[str]]:
     """
-    Safely compute cosine similarity and OCR brand verification.
+    Safely compute OCR brand verification and MobileNetV2 cosine similarity.
     Returns (label, similarity, reason_detail).
     """
     try:
-        from ml.image_signal.embedder import get_embedder
-        from ml.image_signal.similarity import cosine_similarity, classify, load_calibrated_thresholds
         from ml.image_signal.ocr_checker import verify_label_text
 
-        query_emb = get_embedder().embed_bytes(query_bytes)
-        ref_emb = np.frombuffer(ref_embedding_bytes, dtype=np.float32)
-        sim = cosine_similarity(query_emb, ref_emb)
-        thr_gen, thr_cnt, _, _ = load_calibrated_thresholds()
-        label, _ = classify(sim, thr_gen, thr_cnt)
-        sim_round = round(float(sim), 4)
-
-        # ── 1. OCR Brand Verification ──
+        # ── 1. OCR Brand Verification (Runs first) ──
         ocr_res = verify_label_text(query_bytes, target_brand=target_brand, target_name=target_name)
         ocr_detail = ocr_res.get("reason", "")
 
-        # If OCR detected a deceptive lookalike (e.g. Bislie vs Bisleri), flag as counterfeit immediately
+        # If OCR detected a deceptive lookalike (e.g. Bislie vs Bisleri, Adibas vs Adidas), flag as counterfeit immediately
         if ocr_res.get("status") == "counterfeit":
-            return "counterfeit", sim_round, ocr_detail
+            return "counterfeit", 0.0, ocr_detail
 
-        # If OCR confirmed genuine brand text on packaging and visual similarity is reasonable
-        if ocr_res.get("status") == "genuine" and sim >= 0.60:
-            return "genuine", sim_round, ocr_detail
+        # ── 2. MobileNetV2 Visual Similarity (if reference embedding available) ──
+        sim = None
+        sim_round = None
+        label = None
+        if ref_embedding_bytes:
+            try:
+                from ml.image_signal.embedder import get_embedder
+                from ml.image_signal.similarity import cosine_similarity, classify, load_calibrated_thresholds
+
+                query_emb = get_embedder().embed_bytes(query_bytes)
+                ref_emb = np.frombuffer(ref_embedding_bytes, dtype=np.float32)
+                sim = cosine_similarity(query_emb, ref_emb)
+                thr_gen, thr_cnt, _, _ = load_calibrated_thresholds()
+                label, _ = classify(sim, thr_gen, thr_cnt)
+                sim_round = round(float(sim), 4)
+            except Exception:
+                pass
+
+        # If OCR confirmed genuine brand text on packaging
+        if ocr_res.get("status") == "genuine":
+            if sim is not None and sim >= 0.60:
+                return "genuine", sim_round, ocr_detail
+            elif sim is None:
+                return "genuine", 1.0, ocr_detail
 
         # If visual similarity is below counterfeit threshold
-        if label == "counterfeit":
-            return "counterfeit", sim_round, f"Visual similarity {sim_round:.3f} below threshold {thr_cnt:.2f}"
+        if label == "counterfeit" and sim_round is not None:
+            return "counterfeit", sim_round, f"Visual similarity {sim_round:.3f} below threshold"
 
         # If visual similarity is in ambiguous lookalike zone (e.g. 0.35 - 0.72)
-        if label == "uncertain":
-            ambig_msg = f"Visual similarity {sim_round:.3f} in ambiguous lookalike zone ({thr_cnt:.2f}-{thr_gen:.2f})"
+        if label == "uncertain" and sim_round is not None:
+            ambig_msg = f"Visual similarity {sim_round:.3f} in ambiguous lookalike zone"
             if ocr_detail:
                 ambig_msg += f"; {ocr_detail}"
             return "uncertain", sim_round, ambig_msg
 
-        return label, sim_round, ocr_detail or f"Visual similarity {sim_round:.3f} verified"
+        if label and sim_round is not None:
+            return label, sim_round, ocr_detail or f"Visual similarity {sim_round:.3f} verified"
+
+        # If only OCR was available and passed or was clean
+        if ocr_res.get("status") == "genuine":
+            return "genuine", 1.0, ocr_detail
+
+        return None, None, ocr_detail or "No visual mismatch detected"
     except Exception as exc:
         return None, None, str(exc)
 
@@ -541,16 +560,18 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
         try:
             q_bytes = base64.b64decode(req.image_bytes)
             db_prod = get_product_by_pid(db, product_id)
-            if db_prod and db_prod.image_embedding:
-                image_result, image_sim, image_reason = _classify_image_safe(
-                    q_bytes,
-                    db_prod.image_embedding,
-                    target_brand=db_prod.brand or "",
-                    target_name=db_prod.name or "",
-                )
-            else:
+            ref_emb = db_prod.image_embedding if db_prod else None
+            t_brand = (db_prod.brand or "") if db_prod else ""
+            t_name  = (db_prod.name or "") if db_prod else ""
+            image_result, image_sim, image_reason = _classify_image_safe(
+                q_bytes,
+                ref_emb,
+                target_brand=t_brand,
+                target_name=t_name,
+            )
+            if not image_result:
                 image_result = "absent"
-                image_reason = "No reference image registered for this product"
+                image_reason = image_reason or "No reference image registered for this product"
         except Exception as exc:
             image_result = "absent"
             image_reason = f"Image processing error: {exc}"
