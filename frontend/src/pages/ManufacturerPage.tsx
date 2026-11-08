@@ -138,15 +138,15 @@ export default function ManufacturerPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[#26384B] pb-5">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-stark-border pb-5">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-[#00BFFF]/10 border border-[#00BFFF]/30 text-[#00BFFF] text-[11px] font-mono mb-2">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-stark-cyan/10 border border-stark-cyan/30 text-stark-cyan text-[11px] font-mono mb-2">
             STARK // MANUFACTURER SUITE
           </div>
-          <h1 className="text-2xl font-bold text-[#F1F6FC] tracking-tight">
+          <h1 className="text-2xl font-bold text-text-heading tracking-tight">
             Manufacturer Portal
           </h1>
-          <p className="text-xs text-[#9BAFC5] mt-1">
+          <p className="text-xs text-text-secondary mt-1">
             Register new authentic physical assets on the Ethereum blockchain and issue dual-channel cryptographic credentials.
           </p>
         </div>
@@ -155,15 +155,14 @@ export default function ManufacturerPage() {
         <div className="shrink-0">
           {isMetaMaskAvailable() ? (
             account ? (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#111C29] border border-[#26384B]">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-bg-card border border-stark-border shadow-sm">
                 <span
-                  className={`w-2 h-2 rounded-full ${
-                    chainOk ? "bg-[#10B981] shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-[#EF4444]"
-                  }`}
+                  className={`w-2 h-2 rounded-full ${chainOk ? "bg-stark-emerald shadow-[0_0_8px_var(--success-border)]" : "bg-stark-red"
+                    }`}
                 />
                 <div className="text-right">
-                  <p className="text-[10px] font-mono text-[#9BAFC5]">CONNECTED WALLET</p>
-                  <p className="font-mono text-xs text-[#F1F6FC]">
+                  <p className="text-[10px] font-mono text-text-secondary">CONNECTED WALLET</p>
+                  <p className="font-mono text-xs text-text-primary">
                     {account.slice(0, 6)}...{account.slice(-4)}
                   </p>
                 </div>
@@ -172,14 +171,14 @@ export default function ManufacturerPage() {
               <button
                 type="button"
                 onClick={handleConnect}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#00BFFF]/10 to-[#168BFF]/20 hover:from-[#00BFFF]/20 hover:to-[#168BFF]/30 border border-[#00BFFF]/40 text-[#00BFFF] text-xs font-semibold tracking-wide transition-all shadow-sm flex items-center gap-2"
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-stark-cyan/10 to-stark-blue/20 hover:from-stark-cyan/20 hover:to-stark-blue/30 border border-stark-cyan/40 text-stark-cyan text-xs font-semibold tracking-wide transition-all shadow-sm flex items-center gap-2"
               >
                 <span>🦊</span>
                 <span>Connect MetaMask</span>
               </button>
             )
           ) : (
-            <span className="text-xs font-mono text-[#5B708B] px-3 py-1.5 rounded-lg bg-[#111C29] border border-[#26384B]">
+            <span className="text-xs font-mono text-text-muted px-3 py-1.5 rounded-lg bg-bg-card border border-stark-border">
               MetaMask Not Detected
             </span>
           )}
@@ -191,7 +190,7 @@ export default function ManufacturerPage() {
         title="Register New Physical Asset"
         subtitle="Generates an on-chain recordHash and mints cryptographic QR + NFC credentials"
         icon={
-          <svg className="w-5 h-5 text-[#00BFFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-stark-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         }
@@ -199,50 +198,50 @@ export default function ManufacturerPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#9BAFC5] mb-1.5">
-                Product Name <span className="text-[#00BFFF]">*</span>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                Product Name <span className="text-stark-cyan">*</span>
               </label>
               <input
-                className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF] focus:ring-1 focus:ring-[#00BFFF]"
+                className="w-full rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Submariner Date"
+                placeholder="e.g. Enter Product Name"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#9BAFC5] mb-1.5">
-                Brand / Manufacturer <span className="text-[#00BFFF]">*</span>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                Brand / Manufacturer <span className="text-stark-cyan">*</span>
               </label>
               <input
-                className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF] focus:ring-1 focus:ring-[#00BFFF]"
+                className="w-full rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
                 value={brand}
                 onChange={(e) => setBrand(e.target.value)}
-                placeholder="e.g. Rolex"
+                placeholder="e.g. Enter Brand/Manufacturer"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-[#9BAFC5] mb-1.5">
-                Serial Number <span className="text-[#00BFFF]">*</span>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                Serial Number <span className="text-stark-cyan">*</span>
               </label>
               <input
-                className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF] focus:ring-1 focus:ring-[#00BFFF]"
+                className="w-full rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
                 value={serial}
                 onChange={(e) => setSerial(e.target.value)}
-                placeholder="e.g. SN-8829471"
+                placeholder="e.g. Enter Serial Number"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#9BAFC5] mb-1.5">
-                Manufacturer Ethereum Address <span className="text-[#00BFFF]">*</span>
+              <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                Manufacturer Ethereum Address <span className="text-stark-cyan">*</span>
               </label>
               <input
-                className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF] focus:ring-1 focus:ring-[#00BFFF]"
+                className="w-full rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
                 value={mfrAddr}
                 onChange={(e) => setMfrAddr(e.target.value)}
-                placeholder="0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b"
+                placeholder="e.g. Enter Manufacturer Ethereum Address"
               />
             </div>
           </div>
@@ -250,35 +249,35 @@ export default function ManufacturerPage() {
           {/* Private Key Input (Masked, with security disclosure) */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-medium text-[#9BAFC5]">
-                Manufacturer Private Key (Signing Token) <span className="text-[#EF4444]">*</span>
+              <label className="text-xs font-medium text-text-secondary">
+                Manufacturer Private Key (Signing Token) <span className="text-stark-red">*</span>
               </label>
-              <span className="text-[10px] font-mono text-[#5B708B]">
+              <span className="text-[10px] font-mono text-text-muted">
                 TRANSIENT // NEVER STORED
               </span>
             </div>
             <input
               type="password"
-              className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs font-mono text-[#00BFFF] focus:outline-none focus:border-[#00BFFF] focus:ring-1 focus:ring-[#00BFFF]"
+              className="w-full rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-stark-cyan focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
               value={mfrKey}
               onChange={(e) => setMfrKey(e.target.value)}
-              placeholder="0x..."
+              placeholder="Enter Manufacturer Private Key"
               autoComplete="off"
             />
-            <p className="text-[11px] text-[#5B708B] mt-1">
-              Used solely to sign the EVM <code className="text-[#9BAFC5]">registerProduct()</code> transaction on Ganache. Never stored, persisted, or logged.
+            <p className="text-[11px] text-text-muted mt-1">
+              Used solely to sign the EVM <code className="text-text-secondary">registerProduct()</code> transaction on Ganache. Never stored, persisted, or logged.
             </p>
           </div>
 
           {/* Product Image Upload with Preview & Replace */}
           <div>
-            <label className="block text-xs font-medium text-[#9BAFC5] mb-1.5">
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">
               Product Reference Image (Optional — MobileNetV2 1280-d Feature Extraction)
             </label>
             {!photoPreview ? (
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-[#26384B] hover:border-[#00BFFF]/50 rounded-xl p-6 text-center cursor-pointer bg-[#080D14]/60 hover:bg-[#080D14] transition-all"
+                className="border-2 border-dashed border-stark-border hover:border-stark-cyan/60 rounded-xl p-6 text-center cursor-pointer bg-bg-main/60 hover:bg-bg-elevated/40 transition-all"
               >
                 <input
                   ref={fileInputRef}
@@ -287,35 +286,35 @@ export default function ManufacturerPage() {
                   className="hidden"
                   onChange={handlePhotoChange}
                 />
-                <div className="w-10 h-10 rounded-lg bg-[#172536] border border-[#26384B] flex items-center justify-center text-[#00BFFF] mx-auto mb-2">
+                <div className="w-10 h-10 rounded-lg bg-bg-elevated border border-stark-border flex items-center justify-center text-stark-cyan mx-auto mb-2 shadow-sm">
                   📷
                 </div>
-                <p className="text-xs font-medium text-[#F1F6FC]">
+                <p className="text-xs font-medium text-text-primary">
                   Click to select or drop product reference image
                 </p>
-                <p className="text-[10px] text-[#5B708B] mt-1">
+                <p className="text-[10px] text-text-muted mt-1">
                   Supports PNG, JPG, WebP up to 5MB. SHA-256 fingerprint anchors on-chain.
                 </p>
               </div>
             ) : (
-              <div className="flex items-center gap-4 p-3 rounded-xl bg-[#080D14] border border-[#26384B]">
+              <div className="flex items-center gap-4 p-3 rounded-xl bg-bg-elevated border border-stark-border shadow-sm">
                 <img
                   src={photoPreview}
                   alt="Product preview"
-                  className="w-16 h-16 object-cover rounded-lg border border-[#26384B]"
+                  className="w-16 h-16 object-cover rounded-lg border border-stark-border"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[#F1F6FC] truncate">
+                  <p className="text-xs font-semibold text-text-primary truncate">
                     {photo?.name}
                   </p>
-                  <p className="text-[10px] font-mono text-[#9BAFC5]">
+                  <p className="text-[10px] font-mono text-text-secondary">
                     {((photo?.size || 0) / 1024).toFixed(1)} KB
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={removePhoto}
-                  className="text-xs text-[#EF4444] hover:text-[#EF4444]/80 px-3 py-1.5 rounded-lg border border-[#EF4444]/30 hover:bg-[#EF4444]/10 transition-colors"
+                  className="text-xs text-stark-red hover:text-stark-red/80 px-3 py-1.5 rounded-lg border border-stark-red/30 hover:bg-stark-red/10 transition-colors"
                 >
                   Remove
                 </button>
@@ -324,7 +323,7 @@ export default function ManufacturerPage() {
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-xs">
+            <div className="p-3 rounded-lg bg-stark-red/10 border border-stark-red/30 text-stark-red text-xs">
               {error}
             </div>
           )}
@@ -332,7 +331,7 @@ export default function ManufacturerPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00BFFF] to-[#168BFF] text-white font-bold text-xs tracking-wider uppercase shadow-stark-glow hover:opacity-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-stark-cyan to-stark-blue text-white font-bold text-xs tracking-wider uppercase shadow-stark-glow hover:opacity-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -356,39 +355,49 @@ export default function ManufacturerPage() {
           subtitle="Physical item identity anchored to smart contract"
           glow={true}
           icon={
-            <svg className="w-5 h-5 text-[#10B981]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-stark-emerald" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           }
         >
-          <div className="p-3 rounded-lg bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs font-semibold mb-4 flex items-center gap-2">
+          <div className="p-3 rounded-lg bg-stark-emerald/10 border border-stark-emerald/30 text-stark-emerald text-xs font-semibold mb-4 flex items-center gap-2">
             <span>✓</span> Product successfully registered in ProductRegistry.sol contract!
           </div>
 
           <div className="overflow-x-auto mb-5">
             <table className="w-full text-xs">
               <tbody>
-                <tr className="border-b border-[#26384B]/40">
-                  <td className="py-2 text-[#9BAFC5]">Product ID (bytes32)</td>
-                  <td className="py-2 text-right font-mono text-[#00BFFF] break-all">
+                <tr className="border-b border-stark-border/50 bg-stark-cyan/10">
+                  <td className="py-2.5 px-2 text-stark-cyan font-semibold flex items-center gap-1.5">
+                    <span>🏷️</span> Short Product ID (Alias)
+                  </td>
+                  <td className="py-2.5 px-2 text-right font-mono font-bold text-sm text-stark-cyan">
+                    <span className="px-2.5 py-1 rounded-md bg-stark-cyan/15 border border-stark-cyan/40">
+                      {result.product.short_id || result.short_id || "PRD-..."}
+                    </span>
+                  </td>
+                </tr>
+                <tr className="border-b border-stark-border/50">
+                  <td className="py-2 px-2 text-text-secondary">Blockchain Hash (bytes32)</td>
+                  <td className="py-2 px-2 text-right font-mono text-text-secondary break-all">
                     {result.product.product_id}
                   </td>
                 </tr>
-                <tr className="border-b border-[#26384B]/40">
-                  <td className="py-2 text-[#9BAFC5]">Record Hash</td>
-                  <td className="py-2 text-right font-mono text-[#9BAFC5] break-all">
+                <tr className="border-b border-stark-border/50">
+                  <td className="py-2 px-2 text-text-secondary">Record Hash</td>
+                  <td className="py-2 px-2 text-right font-mono text-text-secondary break-all">
                     {result.product.record_hash}
                   </td>
                 </tr>
-                <tr className="border-b border-[#26384B]/40">
-                  <td className="py-2 text-[#9BAFC5]">EVM Transaction Hash</td>
-                  <td className="py-2 text-right font-mono text-[#10B981] break-all">
+                <tr className="border-b border-stark-border/50">
+                  <td className="py-2 px-2 text-text-secondary">EVM Transaction Hash</td>
+                  <td className="py-2 px-2 text-right font-mono text-stark-emerald break-all font-semibold">
                     {result.tx_hash}
                   </td>
                 </tr>
-                <tr className="border-b border-[#26384B]/40">
-                  <td className="py-2 text-[#9BAFC5]">Asset Name / Serial</td>
-                  <td className="py-2 text-right font-semibold text-[#F1F6FC]">
+                <tr className="border-b border-stark-border/50">
+                  <td className="py-2 px-2 text-text-secondary">Asset Name / Serial</td>
+                  <td className="py-2 px-2 text-right font-semibold text-text-primary">
                     {result.product.name} ({result.product.serial})
                   </td>
                 </tr>
@@ -399,34 +408,39 @@ export default function ManufacturerPage() {
           {/* Downloadable Credentials */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             {/* QR Card */}
-            <div className="p-4 rounded-xl bg-[#080D14] border border-[#26384B] flex flex-col items-center text-center">
-              <p className="text-xs font-mono text-[#9BAFC5] mb-2 uppercase">Layer 1a: Signed QR Token</p>
+            <div className="p-4 rounded-xl bg-bg-main border border-stark-border flex flex-col items-center text-center shadow-sm">
+              <p className="text-xs font-mono text-text-secondary mb-2 uppercase">Layer 1a: Signed QR Token</p>
               {qrData && (
-                <div className="p-2 bg-white rounded-lg shadow-md mb-3">
+                <div className="p-2 bg-white rounded-lg shadow-md mb-2">
                   <img src={qrData} alt="QR Code" width={140} height={140} />
                 </div>
+              )}
+              {(result.product.short_id || result.short_id) && (
+                <p className="text-xs font-mono text-stark-cyan font-bold mb-3 px-2 py-0.5 rounded bg-bg-elevated border border-stark-border">
+                  Short ID: {result.product.short_id || result.short_id}
+                </p>
               )}
               <button
                 type="button"
                 onClick={downloadQR}
-                className="w-full py-1.5 rounded-lg bg-[#172536] hover:bg-[#172536]/80 border border-[#26384B] text-xs font-semibold text-[#00BFFF] transition-colors"
+                className="w-full py-1.5 rounded-lg bg-bg-elevated hover:bg-stark-cyan/15 border border-stark-border text-xs font-semibold text-stark-cyan transition-colors shadow-sm"
               >
                 📥 Download QR Code (PNG)
               </button>
             </div>
 
             {/* NFC Card */}
-            <div className="p-4 rounded-xl bg-[#080D14] border border-[#26384B] flex flex-col justify-between">
+            <div className="p-4 rounded-xl bg-bg-main border border-stark-border flex flex-col justify-between shadow-sm">
               <div>
-                <p className="text-xs font-mono text-[#9BAFC5] mb-2 uppercase">Layer 1b: NTAG 424 SUN Payload</p>
-                <pre className="text-[11px] font-mono text-[#9BAFC5] bg-[#0D1520] p-2.5 rounded-lg border border-[#26384B] overflow-auto max-h-36 mb-3">
+                <p className="text-xs font-mono text-text-secondary mb-2 uppercase">Layer 1b: NTAG 424 SUN Payload</p>
+                <pre className="text-[11px] font-mono text-text-secondary bg-bg-secondary p-2.5 rounded-lg border border-stark-border overflow-auto max-h-36 mb-3">
                   {JSON.stringify(result.nfc_payload, null, 2)}
                 </pre>
               </div>
               <button
                 type="button"
                 onClick={downloadNFC}
-                className="w-full py-1.5 rounded-lg bg-[#172536] hover:bg-[#172536]/80 border border-[#26384B] text-xs font-semibold text-[#00BFFF] transition-colors"
+                className="w-full py-1.5 rounded-lg bg-bg-elevated hover:bg-stark-cyan/15 border border-stark-border text-xs font-semibold text-stark-cyan transition-colors shadow-sm"
               >
                 📥 Download NFC Payload (JSON)
               </button>

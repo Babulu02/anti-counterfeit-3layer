@@ -41,9 +41,8 @@ def get_w3() -> Web3:
     return _make_w3(get_settings().rpc_url)
 
 
-@lru_cache(maxsize=1)
 def get_contract() -> Contract:
-    """Return a cached ProductRegistry contract instance."""
+    """Return a ProductRegistry contract instance for current address."""
     s = get_settings()
     w3 = get_w3()
     with open(s.abi_path) as f:
@@ -156,3 +155,24 @@ def chain_log_scan(product_id_hex: str, scan_hash: bytes, verdict_code: int) -> 
     pid      = bytes.fromhex(product_id_hex.removeprefix("0x"))
     shash    = scan_hash if isinstance(scan_hash, bytes) else bytes.fromhex(scan_hash)
     return _send_tx(w3, account, contract.functions.logScan(pid, shash, verdict_code))
+
+
+def chain_add_manufacturer(mfr_address: str) -> dict:
+    """Call addManufacturer() signed by the contract owner account (Account #0)."""
+    s        = get_settings()
+    w3       = get_w3()
+    contract = get_contract()
+    account  = Account.from_key(s.owner_private_key)
+    addr     = Web3.to_checksum_address(mfr_address)
+    return _send_tx(w3, account, contract.functions.addManufacturer(addr))
+
+
+def chain_remove_manufacturer(mfr_address: str) -> dict:
+    """Call removeManufacturer() signed by the contract owner account (Account #0)."""
+    s        = get_settings()
+    w3       = get_w3()
+    contract = get_contract()
+    account  = Account.from_key(s.owner_private_key)
+    addr     = Web3.to_checksum_address(mfr_address)
+    return _send_tx(w3, account, contract.functions.removeManufacturer(addr))
+

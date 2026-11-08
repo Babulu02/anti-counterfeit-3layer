@@ -32,9 +32,17 @@ def get_manufacturer(db: Session, address: str) -> Manufacturer | None:
     )
 
 
+def list_manufacturers(db: Session, skip: int = 0, limit: int = 100) -> list[Manufacturer]:
+    return list(db.scalars(select(Manufacturer).offset(skip).limit(limit)))
+
+
 def create_manufacturer(db: Session, address: str, name: str) -> Manufacturer:
-    mfr = Manufacturer(address=address, name=name)
-    db.add(mfr)
+    mfr = get_manufacturer(db, address)
+    if mfr:
+        mfr.name = name
+    else:
+        mfr = Manufacturer(address=address, name=name)
+        db.add(mfr)
     db.commit()
     db.refresh(mfr)
     return mfr
@@ -43,8 +51,12 @@ def create_manufacturer(db: Session, address: str, name: str) -> Manufacturer:
 # ── Products ───────────────────────────────────────────────────────────────────
 
 def get_product_by_pid(db: Session, product_id: str) -> Product | None:
+    from sqlalchemy import or_
+    clean = product_id.strip()
     return db.scalar(
-        select(Product).where(Product.product_id == product_id)
+        select(Product).where(
+            or_(Product.product_id == clean, Product.short_id == clean)
+        )
     )
 
 
@@ -73,6 +85,19 @@ def mark_product_sold(db: Session, product_id: str) -> Product | None:
 
 def get_tag(db: Session, uid: str) -> Tag | None:
     return db.get(Tag, uid)
+
+
+def list_tags(db: Session, skip: int = 0, limit: int = 100) -> list[Tag]:
+    return list(db.scalars(select(Tag).offset(skip).limit(limit)))
+
+
+def toggle_tag_state(db: Session, uid: str, state: str) -> Tag | None:
+    tag = db.get(Tag, uid)
+    if tag:
+        tag.state = state
+        db.commit()
+        db.refresh(tag)
+    return tag
 
 
 def upsert_tag(db: Session, uid: str, product_id: str,

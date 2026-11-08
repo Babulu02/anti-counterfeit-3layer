@@ -42,6 +42,11 @@ export default function VerifyPage() {
   const divId = "verify-qr-reader";
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pid = params.get("pid");
+    if (pid) {
+      setProductId(pid);
+    }
     return () => {
       stopCamera();
     };
@@ -75,8 +80,8 @@ export default function VerifyPage() {
       setScanning(false);
       setCameraError(
         err?.message?.includes("Permission")
-          ? "Camera permission denied. Please allow camera access in browser settings or enter QR payload manually below."
-          : `Camera error: ${err?.message || err}. You can enter values manually.`
+          ? "Camera permission denied. Please allow camera access in browser settings."
+          : `Camera error: ${err?.message || err}`
       );
     }
   }
@@ -99,8 +104,7 @@ export default function VerifyPage() {
           setLon(pos.coords.longitude);
         },
         (err) => {
-          console.warn("Geolocation denied or error:", err);
-          setUseLocation(false);
+          console.warn("Geolocation query error:", err.message);
         }
       );
     } else {
@@ -112,17 +116,19 @@ export default function VerifyPage() {
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
     if (!file.type.startsWith("image/")) {
-      setError("Please select a valid image file (PNG, JPG, WebP).");
+      setError("Please select a valid image file.");
       return;
     }
+
     setImageFile(file);
     const reader = new FileReader();
     reader.onload = () => {
-      const full = reader.result as string;
-      setImagePreview(full);
-      const b64 = full.split(",")[1];
-      setImageBase64(b64);
+      const dataUrl = reader.result as string;
+      setImagePreview(dataUrl);
+      const base64Content = dataUrl.split(",")[1];
+      setImageBase64(base64Content);
     };
     reader.readAsDataURL(file);
     setError(null);
@@ -130,8 +136,8 @@ export default function VerifyPage() {
 
   function removeImage() {
     setImageFile(null);
-    setImageBase64(null);
     setImagePreview(null);
+    setImageBase64(null);
     if (imageInputRef.current) {
       imageInputRef.current.value = "";
     }
@@ -143,31 +149,45 @@ export default function VerifyPage() {
     setResult(null);
     setSoldMsg(null);
 
-    if (!productId.trim()) {
-      setError("Product ID is required for verification.");
+    let cleanPid = productId.trim();
+
+    // Auto-parse pid if user provided full QR URL
+    if (cleanPid.includes("pid=")) {
+      try {
+        const url = new URL(cleanPid);
+        cleanPid = url.searchParams.get("pid") || cleanPid;
+      } catch {}
+    }
+
+    if (!cleanPid && !qrPayload.trim() && channel === "qr") {
+      setError("Please provide a Product ID, short code, or scan a valid QR code.");
+      return;
+    }
+
+    if (channel === "nfc" && !cleanPid) {
+      setError("Product ID or short code is required for NFC telemetry.");
       return;
     }
 
     setLoading(true);
     try {
       const body: any = {
-        product_id: productId.trim(),
+        product_id: cleanPid || "0x" + "0".repeat(64),
         channel,
-        lat: useLocation ? lat : undefined,
-        lon: useLocation ? lon : undefined,
+        lat: lat ?? null,
+        lon: lon ?? null,
       };
 
       if (channel === "qr") {
-        body.qr_payload =
-          qrPayload.trim() || `https://verify.example.com/v?pid=${productId.trim()}`;
+        body.qr_payload = qrPayload.trim() || undefined;
       } else {
-        body.nfc_uid = nfcUid.trim();
-        body.nfc_counter = Number(nfcCounter);
-        body.nfc_cmac = nfcCmac.trim();
+        body.nfc_uid = nfcUid.trim() || undefined;
+        body.nfc_counter = nfcCounter;
+        body.nfc_cmac = nfcCmac.trim() || undefined;
       }
 
       if (imageBase64) {
-        body.image_bytes = imageBase64;
+        body.image_base64 = imageBase64;
       }
 
       const res = await postScan(body);
@@ -183,19 +203,19 @@ export default function VerifyPage() {
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       {/* ── Page Header ── */}
       <div className="text-center py-4">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#00BFFF]/10 border border-[#00BFFF]/30 text-[#00BFFF] text-xs font-mono mb-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stark-cyan/10 border border-stark-cyan/30 text-stark-cyan text-xs font-mono mb-2">
           <span>🛡️</span> MULTI-SIGNAL SECURITY ENGINE
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#F1F6FC] tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-text-heading tracking-tight">
           Verify Product Authenticity
         </h1>
-        <p className="text-xs sm:text-sm text-[#9BAFC5] mt-1 max-w-xl mx-auto">
+        <p className="text-xs sm:text-sm text-text-secondary mt-1 max-w-xl mx-auto">
           Audit physical tokens, smart-contract registration, and spatio-temporal telemetry with deterministic fusion rules.
         </p>
       </div>
 
       {/* ── Channel Selector Tabs ── */}
-      <div className="grid grid-cols-2 gap-3 p-1 rounded-xl bg-[#0D1520] border border-[#26384B]">
+      <div className="grid grid-cols-2 gap-3 p-1 rounded-xl bg-bg-secondary border border-stark-border shadow-sm">
         <button
           type="button"
           onClick={() => {
@@ -204,8 +224,8 @@ export default function VerifyPage() {
           }}
           className={`py-2.5 rounded-lg text-xs font-semibold tracking-wide flex items-center justify-center gap-2 transition-all ${
             channel === "qr"
-              ? "bg-[#172536] text-[#00BFFF] shadow-[0_0_12px_rgba(0,191,255,0.2)] border border-[#00BFFF]/40"
-              : "text-[#9BAFC5] hover:text-[#F1F6FC]"
+              ? "bg-bg-card text-stark-cyan shadow-sm border border-stark-cyan/40"
+              : "text-text-secondary hover:text-text-primary"
           }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -222,8 +242,8 @@ export default function VerifyPage() {
           }}
           className={`py-2.5 rounded-lg text-xs font-semibold tracking-wide flex items-center justify-center gap-2 transition-all ${
             channel === "nfc"
-              ? "bg-[#172536] text-[#00BFFF] shadow-[0_0_12px_rgba(0,191,255,0.2)] border border-[#00BFFF]/40"
-              : "text-[#9BAFC5] hover:text-[#F1F6FC]"
+              ? "bg-bg-card text-stark-cyan shadow-sm border border-stark-cyan/40"
+              : "text-text-secondary hover:text-text-primary"
           }`}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -243,16 +263,16 @@ export default function VerifyPage() {
           {channel === "qr" && (
             <div className="space-y-3">
               {/* Camera Scanner Viewport */}
-              <div className="p-3.5 rounded-xl bg-[#080D14] border border-[#26384B]">
+              <div className="p-3.5 rounded-xl bg-bg-main border border-stark-border shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-[#9BAFC5] flex items-center gap-1.5">
+                  <span className="text-xs font-medium text-text-secondary flex items-center gap-1.5">
                     <span>📷</span> Camera QR Reader
                   </span>
                   {!scanning ? (
                     <button
                       type="button"
                       onClick={startCamera}
-                      className="px-3 py-1 rounded-lg bg-[#00BFFF]/10 border border-[#00BFFF]/40 text-[#00BFFF] hover:bg-[#00BFFF]/20 text-xs font-semibold"
+                      className="px-3 py-1 rounded-lg bg-stark-cyan/10 border border-stark-cyan/40 text-stark-cyan hover:bg-stark-cyan/20 text-xs font-semibold transition"
                     >
                       Activate Camera
                     </button>
@@ -260,7 +280,7 @@ export default function VerifyPage() {
                     <button
                       type="button"
                       onClick={stopCamera}
-                      className="text-xs text-[#EF4444] hover:underline font-medium"
+                      className="text-xs text-stark-red hover:underline font-medium"
                     >
                       Stop Camera
                     </button>
@@ -268,30 +288,30 @@ export default function VerifyPage() {
                 </div>
                 <div id={divId} className="w-full max-w-xs mx-auto rounded-lg overflow-hidden" />
                 {cameraError && (
-                  <p className="text-xs text-[#EF4444] mt-2 font-mono">{cameraError}</p>
+                  <p className="text-xs text-stark-red mt-2 font-mono">{cameraError}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#9BAFC5] mb-1">
-                  Product ID (0x... bytes32 hex)
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Product ID or Short Code (e.g. PRD-A49F2E or 0x... bytes32 hex)
                 </label>
                 <input
                   type="text"
-                  className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF]"
-                  placeholder="0x..."
+                  className="w-full rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
+                  placeholder="e.g. PRD-A49F2E or 0x..."
                   value={productId}
                   onChange={(e) => setProductId(e.target.value.trim())}
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#9BAFC5] mb-1">
+                <label className="block text-xs font-medium text-text-secondary mb-1">
                   QR Payload URL / Token (Optional if Product ID provided)
                 </label>
                 <input
                   type="text"
-                  className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF]"
+                  className="w-full rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
                   placeholder="https://verify.example.com/v?pid=..."
                   value={qrPayload}
                   onChange={(e) => setQrPayload(e.target.value.trim())}
@@ -304,13 +324,13 @@ export default function VerifyPage() {
           {channel === "nfc" && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-[#9BAFC5] mb-1">
-                  Product ID (0x... bytes32 hex)
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Product ID or Short Code (e.g. PRD-A49F2E or 0x... bytes32 hex)
                 </label>
                 <input
                   type="text"
-                  className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF]"
-                  placeholder="0x..."
+                  className="w-full rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
+                  placeholder="e.g. PRD-A49F2E or 0x..."
                   value={productId}
                   onChange={(e) => setProductId(e.target.value.trim())}
                 />
@@ -318,36 +338,36 @@ export default function VerifyPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-[#9BAFC5] mb-1">
+                  <label className="block text-xs font-medium text-text-secondary mb-1">
                     Tag UID (7 bytes hex)
                   </label>
                   <input
                     type="text"
-                    className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF]"
+                    className="w-full rounded-lg bg-bg-input border border-stark-border px-3 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
                     placeholder="04a1b2c3d4e5f6"
                     value={nfcUid}
                     onChange={(e) => setNfcUid(e.target.value.trim())}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#9BAFC5] mb-1">
+                  <label className="block text-xs font-medium text-text-secondary mb-1">
                     Rolling Counter (SUN)
                   </label>
                   <input
                     type="number"
                     min="1"
-                    className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF]"
+                    className="w-full rounded-lg bg-bg-input border border-stark-border px-3 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
                     value={nfcCounter}
                     onChange={(e) => setNfcCounter(Number(e.target.value))}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#9BAFC5] mb-1">
+                  <label className="block text-xs font-medium text-text-secondary mb-1">
                     AES-128 CMAC (8 bytes hex)
                   </label>
                   <input
                     type="text"
-                    className="w-full rounded-lg bg-[#080D14] border border-[#26384B] px-3 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF]"
+                    className="w-full rounded-lg bg-bg-input border border-stark-border px-3 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
                     placeholder="a1b2c3d4e5f60718"
                     value={nfcCmac}
                     onChange={(e) => setNfcCmac(e.target.value.trim())}
@@ -358,32 +378,32 @@ export default function VerifyPage() {
           )}
 
           {/* Spatio-temporal Telemetry Options */}
-          <div className="pt-2 border-t border-[#26384B]/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-[#9BAFC5] hover:text-[#F1F6FC]">
+          <div className="pt-2 border-t border-stark-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <label className="flex items-center gap-2 cursor-pointer text-xs text-text-secondary hover:text-text-primary">
               <input
                 type="checkbox"
                 checked={useLocation}
                 onChange={(e) => handleLocationToggle(e.target.checked)}
-                className="rounded bg-[#080D14] border-[#26384B] text-[#00BFFF] focus:ring-0"
+                className="rounded bg-bg-input border-stark-border text-stark-cyan focus:ring-0"
               />
               <span>Attach Device GPS (Audits Spatio-Temporal Velocity)</span>
             </label>
 
             {useLocation && lat !== undefined && lon !== undefined && (
-              <span className="text-[11px] font-mono text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded border border-[#10B981]/30">
+              <span className="text-[11px] font-mono text-stark-emerald bg-stark-emerald/10 px-2 py-0.5 rounded border border-stark-emerald/30">
                 GPS: {lat.toFixed(4)}, {lon.toFixed(4)}
               </span>
             )}
           </div>
 
           {/* Layer 2: Visual Physical Verification (Stolen Tag / Refill Protection) */}
-          <div className="pt-3 border-t border-[#26384B]/60 space-y-3">
+          <div className="pt-3 border-t border-stark-border/60 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h4 className="text-xs font-semibold text-[#F1F6FC] flex items-center gap-2">
+                <h4 className="text-xs font-semibold text-text-heading flex items-center gap-2">
                   <span>📸</span> Layer 2: Physical Product Photo (Detect Stolen QR/NFC Tags)
                 </h4>
-                <p className="text-[11px] text-[#9BAFC5] mt-0.5">
+                <p className="text-[11px] text-text-secondary mt-0.5">
                   Protects against Tag Reapplication attacks. If a genuine tag was peeled or stolen and stuck on a fake item, MobileNetV2 verifies texture and packaging features.
                 </p>
               </div>
@@ -391,7 +411,7 @@ export default function VerifyPage() {
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="text-[11px] text-[#EF4444] hover:underline"
+                  className="text-[11px] text-stark-red hover:underline"
                 >
                   Remove Photo
                 </button>
@@ -399,7 +419,7 @@ export default function VerifyPage() {
             </div>
 
             {!imagePreview ? (
-              <label className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-[#26384B] hover:border-[#00BFFF]/50 bg-[#080D14]/50 cursor-pointer transition group">
+              <label className="flex flex-col items-center justify-center p-4 rounded-xl border border-dashed border-stark-border hover:border-stark-cyan/60 bg-bg-main/60 hover:bg-bg-elevated/40 cursor-pointer transition group shadow-sm">
                 <input
                   ref={imageInputRef}
                   type="file"
@@ -409,34 +429,34 @@ export default function VerifyPage() {
                   onChange={handleImageUpload}
                 />
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#00BFFF]/10 border border-[#00BFFF]/20 flex items-center justify-center text-[#00BFFF] group-hover:scale-105 transition">
+                  <div className="w-10 h-10 rounded-lg bg-stark-cyan/10 border border-stark-cyan/25 flex items-center justify-center text-stark-cyan group-hover:scale-105 transition shadow-sm">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-[#F1F6FC] group-hover:text-[#00BFFF] transition">
+                    <p className="text-xs font-medium text-text-primary group-hover:text-stark-cyan transition">
                       Upload or Snap Product Photo
                     </p>
-                    <p className="text-[10px] text-[#5B708B]">
+                    <p className="text-[10px] text-text-muted">
                       Optional: checks MobileNetV2 embedding vs. registered on-chain asset
                     </p>
                   </div>
                 </div>
               </label>
             ) : (
-              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-[#080D14] border border-[#26384B]">
+              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-bg-elevated border border-stark-border shadow-sm">
                 <img
                   src={imagePreview}
                   alt="Product preview"
-                  className="w-14 h-14 object-cover rounded-lg border border-[#26384B]"
+                  className="w-14 h-14 object-cover rounded-lg border border-stark-border"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-mono text-[#F1F6FC] truncate">
+                  <p className="text-xs font-mono text-text-primary truncate font-semibold">
                     {imageFile?.name}
                   </p>
-                  <p className="text-[10px] text-[#10B981] font-mono mt-0.5">
+                  <p className="text-[10px] text-stark-emerald font-mono mt-0.5">
                     Ready for cosine similarity comparison
                   </p>
                 </div>
@@ -445,7 +465,7 @@ export default function VerifyPage() {
           </div>
 
           {error && (
-            <div className="p-3 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#EF4444] text-xs">
+            <div className="p-3 rounded-lg bg-stark-red/10 border border-stark-red/30 text-stark-red text-xs">
               {error}
             </div>
           )}
@@ -453,7 +473,7 @@ export default function VerifyPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00BFFF] to-[#168BFF] text-white font-bold text-xs tracking-wider uppercase shadow-stark-glow hover:opacity-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-stark-cyan to-stark-blue text-white font-bold text-xs tracking-wider uppercase shadow-stark-glow hover:opacity-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -474,20 +494,20 @@ export default function VerifyPage() {
           subtitle={`Product ID: ${result.product_id}`}
           glow={result.verdict === "Verified"}
           icon={
-            <svg className="w-5 h-5 text-[#00BFFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-stark-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           }
         >
           {/* Main Verdict Display */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl bg-[#080D14] border border-[#26384B] mb-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl bg-bg-main border border-stark-border mb-5 shadow-sm">
             <div>
-              <p className="text-[10px] font-mono text-[#9BAFC5] mb-1">DECISION CLASSIFICATION</p>
+              <p className="text-[10px] font-mono text-text-secondary mb-1">DECISION CLASSIFICATION</p>
               <VerdictBadge verdict={result.verdict} size="lg" />
             </div>
             <div className="text-left sm:text-right">
-              <p className="text-[10px] font-mono text-[#9BAFC5]">REASON</p>
-              <p className="text-xs font-medium text-[#F1F6FC] mt-0.5">{result.reason}</p>
+              <p className="text-[10px] font-mono text-text-secondary">REASON</p>
+              <p className="text-xs font-medium text-text-primary mt-0.5">{result.reason}</p>
             </div>
           </div>
 
@@ -562,19 +582,19 @@ export default function VerifyPage() {
           </div>
 
           {/* Consumer Action: Mark Sold */}
-          <div className="pt-4 border-t border-[#26384B] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#080D14] p-4 rounded-xl border">
+          <div className="pt-4 border-t border-stark-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-bg-main p-4 rounded-xl border border-stark-border shadow-sm">
             <div>
-              <h4 className="text-xs font-semibold text-[#F1F6FC] uppercase tracking-wide flex items-center gap-1.5">
+              <h4 className="text-xs font-semibold text-text-heading uppercase tracking-wide flex items-center gap-1.5">
                 <span>🛒</span> Consumer Point-of-Sale Action
               </h4>
-              <p className="text-xs text-[#9BAFC5] mt-0.5">
+              <p className="text-xs text-text-secondary mt-0.5">
                 {result.sold
                   ? "This physical asset is already marked as SOLD on-chain."
                   : "Simulate purchase: execute the on-chain markSold() transition."}
               </p>
             </div>
 
-            {!result.sold ? (
+            {!result.sold && result.verdict === "Verified" ? (
               <button
                 type="button"
                 onClick={async () => {
@@ -593,19 +613,23 @@ export default function VerifyPage() {
                   }
                 }}
                 disabled={markingSold}
-                className="px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-95 text-white font-semibold text-xs rounded-xl shadow-md whitespace-nowrap transition disabled:opacity-50"
+                className="px-4 py-2 bg-gradient-to-r from-stark-emerald to-emerald-600 hover:opacity-95 text-white font-semibold text-xs rounded-xl shadow-md whitespace-nowrap transition disabled:opacity-50"
               >
                 {markingSold ? "Submitting On-Chain..." : "🏷️ Mark as Sold"}
               </button>
+            ) : !result.sold ? (
+              <span className="text-xs font-mono font-bold text-stark-amber bg-stark-amber/10 px-3 py-1.5 rounded-lg border border-stark-amber/30">
+                Sale Blocked (Item Not Verified)
+              </span>
             ) : (
-              <span className="text-xs font-mono font-bold text-[#F59E0B] bg-[#F59E0B]/10 px-3 py-1.5 rounded-lg border border-[#F59E0B]/30">
+              <span className="text-xs font-mono font-bold text-stark-amber bg-stark-amber/10 px-3 py-1.5 rounded-lg border border-stark-amber/30">
                 Already Sold
               </span>
             )}
           </div>
 
           {soldMsg && (
-            <p className="text-xs font-mono font-medium text-[#10B981] mt-3">{soldMsg}</p>
+            <p className="text-xs font-mono font-medium text-stark-emerald mt-3">{soldMsg}</p>
           )}
         </Card>
       )}
@@ -615,19 +639,19 @@ export default function VerifyPage() {
         title="Direct Retailer / Point-of-Sale Action"
         subtitle="Mark any registered product ID as sold on the Ethereum blockchain"
         icon={
-          <svg className="w-5 h-5 text-[#00BFFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-5 h-5 text-stark-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
           </svg>
         }
       >
-        <p className="text-xs text-[#9BAFC5] mb-3">
-          Executes the on-chain <code className="text-[#00BFFF]">markSold()</code> transaction via the backend operator. Subsequent scans in new locations will be audited as potential duplicate or stolen units.
+        <p className="text-xs text-text-secondary mb-3">
+          Executes the on-chain <code className="text-stark-cyan font-semibold">markSold()</code> transaction via the backend operator. Subsequent scans in new locations will be audited as potential duplicate or stolen units.
         </p>
         <div className="flex flex-col sm:flex-row gap-2.5">
           <input
             type="text"
-            className="flex-1 rounded-lg bg-[#080D14] border border-[#26384B] px-3.5 py-2 text-xs font-mono text-[#F1F6FC] focus:outline-none focus:border-[#00BFFF]"
-            placeholder="0x... Product ID"
+            className="flex-1 rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
+            placeholder="0x... or PRD-... Product ID"
             value={manualSoldId}
             onChange={(e) => setManualSoldId(e.target.value.trim())}
           />
@@ -647,7 +671,7 @@ export default function VerifyPage() {
               }
             }}
             disabled={markingSold || !manualSoldId}
-            className="px-4 py-2 bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-95 text-white font-semibold text-xs rounded-xl shadow-md whitespace-nowrap transition disabled:opacity-50"
+            className="px-4 py-2 bg-gradient-to-r from-stark-emerald to-emerald-600 hover:opacity-95 text-white font-semibold text-xs rounded-xl shadow-md whitespace-nowrap transition disabled:opacity-50"
           >
             {markingSold ? "Broadcasting Tx..." : "🏷️ Mark as Sold"}
           </button>

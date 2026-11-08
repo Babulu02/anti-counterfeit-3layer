@@ -4,37 +4,47 @@ interface VerdictBadgeProps {
   showGlow?: boolean;
 }
 
-const BADGE_STYLES: Record<string, { bg: string; text: string; border: string; glow: string; dot: string; icon: string }> = {
+const BADGE_CONFIG: Record<
+  string,
+  {
+    bgClass: string;
+    textClass: string;
+    borderClass: string;
+    glowClass: string;
+    dotClass: string;
+    icon: string;
+  }
+> = {
   "Verified": {
-    bg: "bg-[#10B981]/10",
-    text: "text-[#10B981]",
-    border: "border-[#10B981]/40",
-    glow: "shadow-[0_0_12px_rgba(16,185,129,0.25)]",
-    dot: "bg-[#10B981]",
+    bgClass: "bg-stark-emerald/10 dark:bg-stark-emerald/15",
+    textClass: "text-stark-emerald font-semibold",
+    borderClass: "border-stark-emerald/40",
+    glowClass: "shadow-[0_0_12px_var(--success-border)]",
+    dotClass: "bg-stark-emerald",
     icon: "✓",
   },
   "Manual review": {
-    bg: "bg-[#F59E0B]/10",
-    text: "text-[#F59E0B]",
-    border: "border-[#F59E0B]/40",
-    glow: "shadow-[0_0_12px_rgba(245,158,11,0.25)]",
-    dot: "bg-[#F59E0B]",
+    bgClass: "bg-stark-amber/10 dark:bg-stark-amber/15",
+    textClass: "text-stark-amber font-semibold",
+    borderClass: "border-stark-amber/40",
+    glowClass: "shadow-[0_0_12px_var(--warning-border)]",
+    dotClass: "bg-stark-amber",
     icon: "⚠",
   },
   "Suspicious activity": {
-    bg: "bg-[#EF4444]/10",
-    text: "text-[#EF4444]",
-    border: "border-[#EF4444]/40",
-    glow: "shadow-[0_0_12px_rgba(239,68,68,0.25)]",
-    dot: "bg-[#EF4444]",
+    bgClass: "bg-stark-red/10 dark:bg-stark-red/15",
+    textClass: "text-stark-red font-semibold",
+    borderClass: "border-stark-red/40",
+    glowClass: "shadow-[0_0_12px_var(--danger-border)]",
+    dotClass: "bg-stark-red",
     icon: "✕",
   },
   "Unregistered product": {
-    bg: "bg-[#26384B]/40",
-    text: "text-[#9BAFC5]",
-    border: "border-[#F59E0B]/30",
-    glow: "shadow-[0_0_8px_rgba(155,175,197,0.15)]",
-    dot: "bg-[#9BAFC5]",
+    bgClass: "bg-bg-elevated",
+    textClass: "text-text-secondary font-semibold",
+    borderClass: "border-stark-border",
+    glowClass: "shadow-sm",
+    dotClass: "bg-text-secondary",
     icon: "?",
   },
 };
@@ -44,7 +54,7 @@ export default function VerdictBadge({
   size = "md",
   showGlow = true,
 }: VerdictBadgeProps) {
-  const style = BADGE_STYLES[verdict] ?? BADGE_STYLES["Unregistered product"];
+  const style = BADGE_CONFIG[verdict] ?? BADGE_CONFIG["Unregistered product"];
 
   const sizeClasses = {
     sm: "px-2 py-0.5 text-xs gap-1.5",
@@ -55,17 +65,23 @@ export default function VerdictBadge({
   return (
     <span
       className={`inline-flex items-center rounded-lg border font-mono tracking-wide transition-all ${
-        style.bg
-      } ${style.text} ${style.border} ${showGlow ? style.glow : ""} ${sizeClasses}`}
+        style.bgClass
+      } ${style.textClass} ${style.borderClass} ${
+        showGlow ? style.glowClass : ""
+      } ${sizeClasses}`}
     >
       <span className="relative flex h-2 w-2">
         <span
-          className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${style.dot}`}
+          className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${style.dotClass}`}
         />
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${style.dot}`} />
+        <span
+          className={`relative inline-flex rounded-full h-2 w-2 ${style.dotClass}`}
+        />
       </span>
       <span>{style.icon}</span>
-      <span className="font-sans font-medium uppercase tracking-wider">{verdict}</span>
+      <span className="font-sans font-medium uppercase tracking-wider">
+        {verdict}
+      </span>
     </span>
   );
 }

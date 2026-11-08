@@ -133,40 +133,42 @@ export default function DemoPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-bold text-sky-800">Demo — Attack Scenarios</h1>
-      <p className="text-sm text-gray-500">
-        Each button registers a fresh product and fires a simulated scan. Results come from the live
-        backend + blockchain + ML fusion. Uses the public Ganache account[2] key — never run on a real network.
-      </p>
+    <div className="space-y-5 max-w-5xl mx-auto pb-12">
+      <div className="border-b border-stark-border pb-4">
+        <h1 className="text-2xl font-bold text-text-heading">Demo — Attack Scenarios</h1>
+        <p className="text-xs text-text-secondary mt-1">
+          Each button registers a fresh product and fires a simulated scan. Results come from the live
+          backend + blockchain + ML fusion. Uses the public Ganache account[2] key — never run on a real network.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {SCENARIOS.map(sc => {
           const res = results[sc.id];
           const busy = running === sc.id;
           return (
-            <Card key={sc.id} className="flex flex-col gap-2">
+            <Card key={sc.id} className="flex flex-col gap-3">
               <div>
-                <p className="font-medium text-sm">{sc.label}</p>
-                <p className="text-xs text-gray-500">{sc.description}</p>
+                <p className="font-semibold text-sm text-text-heading">{sc.label}</p>
+                <p className="text-xs text-text-secondary mt-0.5">{sc.description}</p>
               </div>
               <button
                 onClick={() => runScenario(sc.id)}
                 disabled={busy || running !== null}
-                className="self-start px-4 py-1.5 bg-sky-600 text-white rounded text-sm hover:bg-sky-700 disabled:opacity-50"
+                className="self-start px-4 py-1.5 bg-stark-cyan text-white rounded-lg text-xs font-semibold hover:bg-stark-cyan/90 disabled:opacity-50 transition-colors shadow-sm"
               >
-                {busy ? "Running…" : "Run"}
+                {busy ? "Running…" : "Run Simulation"}
               </button>
               {res && (
-                <div className="space-y-1 mt-1">
+                <div className="space-y-1.5 mt-2 pt-2 border-t border-stark-border/60">
                   {res.error ? (
-                    <p className="text-red-600 text-xs">{res.error}</p>
+                    <p className="text-stark-red text-xs font-mono">{res.error}</p>
                   ) : (
                     res.scans.map((s, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">Scan {i + 1}</span>
-                        <VerdictBadge verdict={s.verdict} />
-                        <span className="text-xs text-gray-400">{s.identity_result}</span>
+                        <span className="text-xs font-mono text-text-muted">Scan {i + 1}</span>
+                        <VerdictBadge verdict={s.verdict} size="sm" />
+                        <span className="text-xs font-mono text-text-secondary">{s.identity_result}</span>
                       </div>
                     ))
                   )}

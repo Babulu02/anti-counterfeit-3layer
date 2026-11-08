@@ -26,6 +26,7 @@ class ProductCreate(BaseModel):
 
 class ProductOut(BaseModel):
     product_id:           str
+    short_id:             Optional[str] = None
     name:                 str
     brand:                str
     serial:               str
@@ -40,6 +41,7 @@ class ProductOut(BaseModel):
 
 class ProductRegisterResponse(BaseModel):
     product:      ProductOut
+    short_id:     Optional[str] = None
     qr_payload:   str          # signed URL to embed in QR
     nfc_payload:  dict         # {"uid": ..., "counter": ..., "cmac": ...}
     tx_hash:      str
@@ -104,3 +106,24 @@ class HealthResponse(BaseModel):
     db:       str
     chain:    str
     contract: str
+
+
+# ── Tag & Manufacturer ─────────────────────────────────────────────────────────
+
+class TagOut(BaseModel):
+    uid:          str
+    product_id:   str
+    channel:      str
+    last_counter: int
+    state:        str
+
+    model_config = {"from_attributes": True}
+
+
+class ManufacturerOut(BaseModel):
+    id:         int
+    address:    str
+    name:       str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

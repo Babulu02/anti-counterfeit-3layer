@@ -18,7 +18,7 @@ from sqlalchemy.engine import URL
 
 # Load .env from the project root (two levels above this file)
 _ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
-load_dotenv(_ENV_PATH, override=False)
+load_dotenv(_ENV_PATH, override=True)
 
 
 class Settings:
@@ -72,7 +72,7 @@ class Settings:
         )
 
 
-@lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Return a cached Settings singleton."""
+    """Return Settings from .env."""
+    load_dotenv(_ENV_PATH, override=True)
     return Settings()

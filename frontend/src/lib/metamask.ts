@@ -6,7 +6,7 @@
  * Chain ID comes from VITE_CHAIN_ID (default 1337 = local Ganache).
  */
 
-import { BrowserProvider, Contract } from "ethers";
+import { BrowserProvider, Contract, getAddress } from "ethers";
 
 const EXPECTED_CHAIN_ID = parseInt(
   (import.meta.env.VITE_CHAIN_ID as string | undefined) ?? "1337",
@@ -102,17 +102,25 @@ export async function getContractDetails(contractAddress: string): Promise<{ own
 
 /** Check whether an address is a whitelisted manufacturer */
 export async function checkIsManufacturer(contractAddress: string, mfrAddress: string): Promise<boolean> {
-  const contract = await getContractInstance(contractAddress, false);
-  return await contract.isManufacturer(mfrAddress);
+  try {
+    const cleanAddr = getAddress(mfrAddress);
+    const contract = await getContractInstance(contractAddress, false);
+    return await contract.isManufacturer(cleanAddr);
+  } catch {
+    return false;
+  }
 }
 
 /** Whitelist a manufacturer using connected MetaMask signer (owner only) */
 export async function whitelistManufacturer(
   contractAddress: string,
-  mfrAddress: string
+  mfrAddress: string,
+  onTxSent?: (txHash: string) => void
 ): Promise<{ txHash: string; blockNumber: number }> {
+  const cleanAddr = getAddress(mfrAddress);
   const contract = await getContractInstance(contractAddress, true);
-  const tx = await contract.addManufacturer(mfrAddress);
+  const tx = await contract.addManufacturer(cleanAddr);
+  if (onTxSent) onTxSent(tx.hash);
   const receipt = await tx.wait();
   return { txHash: receipt.hash, blockNumber: receipt.blockNumber };
 }
@@ -120,10 +128,13 @@ export async function whitelistManufacturer(
 /** Revoke a manufacturer using connected MetaMask signer (owner only) */
 export async function revokeManufacturer(
   contractAddress: string,
-  mfrAddress: string
+  mfrAddress: string,
+  onTxSent?: (txHash: string) => void
 ): Promise<{ txHash: string; blockNumber: number }> {
+  const cleanAddr = getAddress(mfrAddress);
   const contract = await getContractInstance(contractAddress, true);
-  const tx = await contract.removeManufacturer(mfrAddress);
+  const tx = await contract.removeManufacturer(cleanAddr);
+  if (onTxSent) onTxSent(tx.hash);
   const receipt = await tx.wait();
   return { txHash: receipt.hash, blockNumber: receipt.blockNumber };
 }
@@ -131,10 +142,13 @@ export async function revokeManufacturer(
 /** Change backend operator account using connected MetaMask signer (owner only) */
 export async function changeOperator(
   contractAddress: string,
-  newOperatorAddress: string
+  newOperatorAddress: string,
+  onTxSent?: (txHash: string) => void
 ): Promise<{ txHash: string; blockNumber: number }> {
+  const cleanAddr = getAddress(newOperatorAddress);
   const contract = await getContractInstance(contractAddress, true);
-  const tx = await contract.setOperator(newOperatorAddress);
+  const tx = await contract.setOperator(cleanAddr);
+  if (onTxSent) onTxSent(tx.hash);
   const receipt = await tx.wait();
   return { txHash: receipt.hash, blockNumber: receipt.blockNumber };
 }

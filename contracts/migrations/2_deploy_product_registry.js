@@ -27,4 +27,9 @@ module.exports = async function (deployer, network, accounts) {
   const instance = await ProductRegistry.deployed();
   console.log(`\nProductRegistry deployed at: ${instance.address}`);
   console.log(`Add this to your .env:  CONTRACT_ADDRESS=${instance.address}\n`);
+
+  // Automatically whitelist default manufacturer (accounts[2]) for development & testing
+  const defaultManufacturer = accounts[2];
+  await instance.addManufacturer(defaultManufacturer);
+  console.log(`  Whitelisted Default Manufacturer: ${defaultManufacturer}\n`);
 };

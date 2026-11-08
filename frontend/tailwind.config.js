@@ -1,27 +1,33 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
         bg: {
-          main: "#080D14",
-          secondary: "#0D1520",
-          card: "#111C29",
-          elevated: "#172536",
+          main: "var(--bg-main)",
+          secondary: "var(--bg-secondary)",
+          card: "var(--bg-card)",
+          elevated: "var(--bg-elevated)",
+          input: "var(--bg-input)",
         },
         stark: {
-          cyan: "#00BFFF",
+          cyan: "var(--primary)",
+          primary: "var(--primary)",
+          hover: "var(--primary-hover)",
           blue: "#168BFF",
-          border: "#26384B",
-          emerald: "#10B981",
-          amber: "#F59E0B",
-          red: "#EF4444",
+          border: "var(--border)",
+          borderStrong: "var(--border-strong)",
+          emerald: "var(--success)",
+          amber: "var(--warning)",
+          red: "var(--danger)",
         },
         text: {
-          primary: "#F1F6FC",
-          secondary: "#9BAFC5",
-          muted: "#5B708B",
+          primary: "var(--text-primary)",
+          heading: "var(--heading)",
+          secondary: "var(--text-secondary)",
+          muted: "var(--text-muted)",
         },
       },
       fontFamily: {
@@ -29,9 +35,9 @@ export default {
         mono: ["JetBrains Mono", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
       },
       boxShadow: {
-        "stark-glow": "0 0 20px rgba(0, 191, 255, 0.18)",
-        "stark-sm": "0 0 10px rgba(0, 191, 255, 0.12)",
-        "card-glow": "0 4px 20px rgba(0, 0, 0, 0.4), 0 0 1px rgba(38, 56, 75, 0.8)",
+        "stark-glow": "var(--stark-glow)",
+        "stark-sm": "var(--stark-sm)",
+        "card-glow": "var(--card-shadow)",
       },
       animation: {
         "pulse-subtle": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",

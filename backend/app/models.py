@@ -46,6 +46,8 @@ class Product(Base):
     id:          Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     product_id:  Mapped[str] = mapped_column(String(66), unique=True, nullable=False,
                                               comment="bytes32 hex, 0x-prefixed")
+    short_id:    Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True,
+                                                    comment="Human-friendly short alias e.g. PRD-A49F2E")
     name:        Mapped[str] = mapped_column(String(200), nullable=False)
     brand:       Mapped[str] = mapped_column(String(120), nullable=False)
     serial:      Mapped[str] = mapped_column(String(80),  nullable=False)
@@ -68,6 +70,7 @@ class Product(Base):
 
     __table_args__ = (
         Index("ix_products_product_id", "product_id"),
+        Index("ix_products_short_id", "short_id"),
     )
 
 

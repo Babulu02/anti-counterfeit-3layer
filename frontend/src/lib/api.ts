@@ -16,6 +16,7 @@ const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)
 
 export interface ProductOut {
   product_id:           string;
+  short_id?:            string | null;
   name:                 string;
   brand:                string;
   serial:               string;
@@ -34,6 +35,7 @@ export interface NfcPayload {
 
 export interface ProductRegisterResponse {
   product:      ProductOut;
+  short_id?:    string | null;
   qr_payload:   string;
   nfc_payload:  NfcPayload;
   tx_hash:      string;
@@ -61,11 +63,27 @@ export interface ScanOut {
   ts:              string;
   lat:             number | null;
   lon:             number | null;
+  device_hash?:    string | null;
   chain_result:    string;
   identity_result: string;
   risk_score:      number | null;
   verdict:         string;
   reason:          string;
+}
+
+export interface TagOut {
+  uid:          string;
+  product_id:   string;
+  channel:      string;
+  last_counter: number;
+  state:        string;
+}
+
+export interface ManufacturerOut {
+  id:         number;
+  address:    string;
+  name:       string;
+  created_at: string;
 }
 
 // ── Helper ───────────────────────────────────────────────────────────────────
@@ -158,5 +176,41 @@ export async function getChainInfo(): Promise<ChainInfo> {
 export async function getRecentScans(limit: number = 100): Promise<ScanOut[]> {
   return req<ScanOut[]>("GET", `/scans/recent?limit=${limit}`);
 }
+
+/** GET /tags */
+export async function listTags(): Promise<TagOut[]> {
+  return req<TagOut[]>("GET", "/tags");
+}
+
+/** POST /tags/{uid}/state */
+export async function updateTagState(uid: string, state: string): Promise<TagOut> {
+  const form = new FormData();
+  form.append("state", state);
+  return req<TagOut>("POST", `/tags/${encodeURIComponent(uid)}/state`, form, true);
+}
+
+/** GET /manufacturers */
+export async function listManufacturers(): Promise<ManufacturerOut[]> {
+  return req<ManufacturerOut[]>("GET", "/manufacturers");
+}
+
+/** POST /manufacturers */
+export async function createManufacturerRecord(address: string, name: string): Promise<ManufacturerOut> {
+  const form = new FormData();
+  form.append("address", address);
+  form.append("name", name);
+  return req<ManufacturerOut>("POST", "/manufacturers", form, true);
+}
+
+/** POST /admin/whitelist */
+export async function apiAdminWhitelist(manufacturerAddress: string): Promise<{ status: string; address: string; tx_hash: string; block: number }> {
+  return req("POST", "/admin/whitelist", { manufacturer_address: manufacturerAddress });
+}
+
+/** POST /admin/revoke */
+export async function apiAdminRevoke(manufacturerAddress: string): Promise<{ status: string; address: string; tx_hash: string; block: number }> {
+  return req("POST", "/admin/revoke", { manufacturer_address: manufacturerAddress });
+}
+
 
 

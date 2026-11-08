@@ -1,43 +1,112 @@
-import { Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import ManufacturerPage from "./pages/ManufacturerPage";
-import VerifyPage from "./pages/VerifyPage";
-import ConsumerPage from "./pages/ConsumerPage";
-import DashboardPage from "./pages/DashboardPage";
-import AdminPage from "./pages/AdminPage";
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+
+// Layouts
+import { AdminLayout } from "./layouts/AdminLayout";
+import { ManufacturerLayout } from "./layouts/ManufacturerLayout";
+import { ConsumerLayout } from "./layouts/ConsumerLayout";
+
+// Admin Portal Pages
+import AdminOverviewPage from "./pages/admin/AdminOverviewPage";
+import ManufacturerManagementPage from "./pages/admin/ManufacturerManagementPage";
+import ProductManagementPage from "./pages/admin/ProductManagementPage";
+import BlockchainManagementPage from "./pages/admin/BlockchainManagementPage";
+import SecurityMonitoringPage from "./pages/admin/SecurityMonitoringPage";
+import TagManagementPage from "./pages/admin/TagManagementPage";
+import AuditLogsPage from "./pages/admin/AuditLogsPage";
+import UserManagementPage from "./pages/admin/UserManagementPage";
+import SystemSettingsPage from "./pages/admin/SystemSettingsPage";
+
+// Manufacturer Portal Pages
+import ManufacturerOverviewPage from "./pages/manufacturer/ManufacturerOverviewPage";
+import CompanyProfilePage from "./pages/manufacturer/CompanyProfilePage";
+import BrandManagementPage from "./pages/manufacturer/BrandManagementPage";
+import ManufacturerProductsPage from "./pages/manufacturer/ManufacturerProductsPage";
+import BatchManagementPage from "./pages/manufacturer/BatchManagementPage";
+import TagGenerationPage from "./pages/manufacturer/TagGenerationPage";
+import NfcEncodingPage from "./pages/manufacturer/NfcEncodingPage";
+import ManufacturerTagsPage from "./pages/manufacturer/ManufacturerTagsPage";
+import EncodingHistoryPage from "./pages/manufacturer/EncodingHistoryPage";
+import ManufacturerAnalyticsPage from "./pages/manufacturer/ManufacturerAnalyticsPage";
+
+// Consumer Portal Pages
+import ConsumerHomePage from "./pages/consumer/ConsumerHomePage";
+import ConsumerVerifyPage from "./pages/consumer/ConsumerVerifyPage";
+import ConsumerResultPage from "./pages/consumer/ConsumerResultPage";
+import ConsumerHistoryPage from "./pages/consumer/ConsumerHistoryPage";
+import ConsumerReportPage from "./pages/consumer/ConsumerReportPage";
+import ConsumerProductsPage from "./pages/consumer/ConsumerProductsPage";
+import ConsumerHelpPage from "./pages/consumer/ConsumerHelpPage";
+import ConsumerAboutPage from "./pages/consumer/ConsumerAboutPage";
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#080D14] text-[#F1F6FC] selection:bg-[#00BFFF]/20 selection:text-[#00BFFF]">
-      {/* ── Fixed Stark-Tech Navigation Bar ── */}
-      <Navbar />
+    <Routes>
+      {/* ── 1. CONSUMER PORTAL (Public Access) ── */}
+      <Route element={<ConsumerLayout />}>
+        <Route path="/" element={<ConsumerHomePage />} />
+        <Route path="/consumer" element={<ConsumerHomePage />} />
+        <Route path="/consumer/verify" element={<ConsumerVerifyPage />} />
+        <Route path="/consumer/result" element={<ConsumerResultPage />} />
+        <Route path="/consumer/history" element={<ConsumerHistoryPage />} />
+        <Route path="/consumer/report" element={<ConsumerReportPage />} />
+        <Route path="/consumer/products" element={<ConsumerProductsPage />} />
+        <Route path="/consumer/help" element={<ConsumerHelpPage />} />
+        <Route path="/consumer/about" element={<ConsumerAboutPage />} />
 
-      {/* ── Main Application Workspace ── */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8">
-        <Routes>
-          <Route path="/" element={<VerifyPage />} />
-          <Route path="/manufacturer" element={<ManufacturerPage />} />
-          <Route path="/verify" element={<VerifyPage />} />
-          <Route path="/consumer" element={<ConsumerPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-          {/* Catch-all redirect to verify */}
-          <Route path="*" element={<VerifyPage />} />
-        </Routes>
-      </main>
+        {/* Backward-compatibility aliases */}
+        <Route path="/verify" element={<ConsumerVerifyPage />} />
+      </Route>
 
-      {/* ── Futuristic Telemetry Footer ── */}
-      <footer className="border-t border-[#26384B] bg-[#0D1520]/80 backdrop-blur-md py-4 text-center">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono text-[#5B708B]">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#00BFFF] animate-pulse" />
-            <span>AETHER PROTOCOL // THREE-LAYER CRYPTOGRAPHIC ARCHITECTURE</span>
-          </div>
-          <div>
-            <span>ETHEREUM EVM 1337 &bull; NTAG 424 SUN &bull; FUSION AI ENGINE</span>
-          </div>
-        </div>
-      </footer>
-    </div>
+      {/* ── 2. MANUFACTURER PORTAL (Role Protected) ── */}
+      <Route
+        path="/manufacturer"
+        element={
+          <ProtectedRoute allowedRoles={["MANUFACTURER", "ADMIN"]}>
+            <ManufacturerLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<ManufacturerOverviewPage />} />
+        <Route path="overview" element={<ManufacturerOverviewPage />} />
+        <Route path="profile" element={<CompanyProfilePage />} />
+        <Route path="brands" element={<BrandManagementPage />} />
+        <Route path="products" element={<ManufacturerProductsPage />} />
+        <Route path="batches" element={<BatchManagementPage />} />
+        <Route path="generate-tags" element={<TagGenerationPage />} />
+        <Route path="nfc-encoding" element={<NfcEncodingPage />} />
+        <Route path="tags" element={<ManufacturerTagsPage />} />
+        <Route path="encoding-history" element={<EncodingHistoryPage />} />
+        <Route path="analytics" element={<ManufacturerAnalyticsPage />} />
+      </Route>
+
+      {/* ── 3. ADMIN PORTAL (Role Protected) ── */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminOverviewPage />} />
+        <Route path="overview" element={<AdminOverviewPage />} />
+        <Route path="manufacturers" element={<ManufacturerManagementPage />} />
+        <Route path="products" element={<ProductManagementPage />} />
+        <Route path="blockchain" element={<BlockchainManagementPage />} />
+        <Route path="security" element={<SecurityMonitoringPage />} />
+        <Route path="tags" element={<TagManagementPage />} />
+        <Route path="audit" element={<AuditLogsPage />} />
+        <Route path="users" element={<UserManagementPage />} />
+        <Route path="settings" element={<SystemSettingsPage />} />
+      </Route>
+
+      {/* Backward compatibility for /dashboard */}
+      <Route path="/dashboard" element={<Navigate to="/admin/overview" replace />} />
+
+      {/* Catch-all redirect to consumer home */}
+      <Route path="*" element={<Navigate to="/consumer" replace />} />
+    </Routes>
   );
 }

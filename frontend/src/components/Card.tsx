@@ -11,9 +11,9 @@ interface CardProps {
 }
 
 /**
- * Stark-Tech inspired Card container.
- * Features deep obsidian background (#111C29), cybernetic border (#26384B),
- * and subtle corner accents.
+ * Premium enterprise Card container.
+ * Features theme-aware card background, subtle border, corner accents,
+ * and high-contrast typography in both Light and Dark themes.
  */
 export default function Card({
   title,
@@ -26,26 +26,26 @@ export default function Card({
 }: CardProps) {
   return (
     <div
-      className={`relative bg-[#111C29]/95 backdrop-blur-md rounded-xl border border-[#26384B] transition-all duration-200 ${
-        glow ? "glow-cyan border-[#00BFFF]/50" : "hover:border-[#26384B]/90"
+      className={`relative bg-bg-card backdrop-blur-md rounded-xl border border-stark-border shadow-card-glow transition-all duration-200 ${
+        glow ? "glow-cyan border-stark-cyan/50" : "hover:border-stark-borderStrong"
       } ${className}`}
     >
       {/* Decorative top corner accent */}
-      <div className="absolute top-0 right-0 w-8 h-[1px] bg-gradient-to-l from-[#00BFFF]/40 to-transparent pointer-events-none" />
-      <div className="absolute top-0 right-0 w-[1px] h-8 bg-gradient-to-b from-[#00BFFF]/40 to-transparent pointer-events-none" />
+      <div className="absolute top-0 right-0 w-8 h-[1px] bg-gradient-to-l from-stark-cyan/40 to-transparent pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[1px] h-8 bg-gradient-to-b from-stark-cyan/40 to-transparent pointer-events-none" />
 
       {(title || action) && (
-        <div className="px-5 py-4 border-b border-[#26384B]/70 flex items-center justify-between gap-3">
+        <div className="px-5 py-4 border-b border-stark-border/70 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            {icon && <span className="text-[#00BFFF] shrink-0">{icon}</span>}
+            {icon && <span className="text-stark-cyan shrink-0">{icon}</span>}
             <div className="min-w-0">
               {title && (
-                <h3 className="font-semibold text-[#F1F6FC] text-sm tracking-wide flex items-center gap-2 truncate">
+                <h3 className="font-semibold text-text-heading text-sm tracking-wide flex items-center gap-2 truncate">
                   {title}
                 </h3>
               )}
               {subtitle && (
-                <p className="text-xs text-[#9BAFC5] mt-0.5 truncate">{subtitle}</p>
+                <p className="text-xs text-text-secondary mt-0.5 truncate">{subtitle}</p>
               )}
             </div>
           </div>

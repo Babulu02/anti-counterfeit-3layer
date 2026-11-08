@@ -37,6 +37,31 @@ def run_live_check():
     assert res.status_code == 200, f"Health check failed: {res.text}"
     print(f"  OK: {res.json()}")
 
+    # Ensure manufacturer is whitelisted on-chain before registering
+    mfr_addr = "0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b"
+    try:
+        from app.chain import get_contract, get_w3
+        from app.config import get_settings
+        from eth_account import Account
+        c = get_contract()
+        w3 = get_w3()
+        if not c.functions.isManufacturer(mfr_addr).call():
+            print("  Manufacturer not whitelisted yet; auto-authorizing via owner key...")
+            s = get_settings()
+            owner_acct = Account.from_key(s.owner_private_key)
+            tx = c.functions.addManufacturer(mfr_addr).build_transaction({
+                'from': owner_acct.address,
+                'nonce': w3.eth.get_transaction_count(owner_acct.address),
+                'gas': 200000,
+                'gasPrice': w3.eth.gas_price,
+            })
+            signed = owner_acct.sign_transaction(tx)
+            h = w3.eth.send_raw_transaction(signed.raw_transaction)
+            w3.eth.wait_for_transaction_receipt(h)
+            print("  Manufacturer successfully whitelisted on-chain.")
+    except Exception:
+        pass
+
     # 2. Register product
     print("\n[2/8] Registering Product (POST /products)...")
     reg_data = {

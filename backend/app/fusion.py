@@ -169,21 +169,36 @@ def fuse(signals: Signals) -> tuple[str, str]:
             f"Scan pattern is unusual but not conclusively malicious.",
         )
 
-    # ── Rule 9: Image visual mismatch (Phase 8 optional signal) ──────────────
+    # ── Rule 9: Image visual mismatch (Phase 8 physical packaging signal) ────
     if signals.image_result == "counterfeit":
         detail = signals.image_reason or (
             f"similarity={signals.image_similarity:.3f} below threshold"
             if signals.image_similarity is not None else "physical packaging anomaly"
         )
         return (
+            VERDICT_SUSPICIOUS,
+            f"Physical packaging mismatch ({detail}) — possible clone-first duplicate QR, lookalike brand, or counterfeit packaging.",
+        )
+
+    # ── Rule 9b: Image visual uncertainty (Phase 8 ambiguous lookalike) ──────
+    if signals.image_result == "uncertain":
+        detail = signals.image_reason or (
+            f"similarity={signals.image_similarity:.3f} in ambiguous lookalike zone"
+            if signals.image_similarity is not None else "visual appearance unconfirmed"
+        )
+        return (
             VERDICT_MANUAL,
-            f"Visual appearance mismatch ({detail}) — possible product swap, lookalike brand or counterfeit packaging.",
+            f"Visual appearance uncertain ({detail}) — packaging does not conclusively match registered asset. Physical inspection required before purchase or authentication.",
         )
 
     # ── Rule 10: all clear ───────────────────────────────────────────────────
+    verified_reason = "Product is on-chain, identity check passed, and scan pattern is normal."
+    if signals.image_result == "genuine":
+        verified_reason = "Product is on-chain, identity check passed, physical packaging visually verified, and scan pattern is normal."
+
     return (
         VERDICT_VERIFIED,
-        "Product is on-chain, identity check passed, and scan pattern is normal.",
+        verified_reason,
     )
 
 

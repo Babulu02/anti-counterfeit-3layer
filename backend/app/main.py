@@ -38,6 +38,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from pydantic import BaseModel
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
@@ -45,23 +46,29 @@ from sqlalchemy.orm import Session
 
 from .chain import (
     build_scan_hash,
+    chain_add_manufacturer,
     chain_get_product,
     chain_log_scan,
     chain_mark_sold,
     chain_register_product,
+    chain_remove_manufacturer,
     get_contract,
     get_w3,
 )
 from .config import get_settings
 from .crud import (
+    create_manufacturer,
     create_product,
     get_product_by_pid,
     get_scan_history,
+    list_manufacturers,
     list_products,
     list_recent_scans,
     list_scans,
+    list_tags,
     mark_product_sold,
     store_scan,
+    toggle_tag_state,
     upsert_tag,
 )
 from .database import get_db
@@ -75,11 +82,13 @@ from .identity_service import verify_nfc, verify_qr
 from .models import Base
 from .schemas import (
     HealthResponse,
+    ManufacturerOut,
     ProductOut,
     ProductRegisterResponse,
     ScanOut,
     ScanRequest,
     ScanResponse,
+    TagOut,
 )
 
 # Import identity helpers for QR generation
@@ -122,11 +131,27 @@ _IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 @app.on_event("startup")
 def on_startup():
-    """Ensure database tables and directories exist on startup."""
+    """Ensure database tables, directories, and schema migrations exist on startup."""
     try:
         from .database import engine
         from .models import Base
         Base.metadata.create_all(bind=engine)
+
+        # Auto-ensure short_id column exists on products table
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            try:
+                cols = [r[0] for r in conn.execute(text("SHOW COLUMNS FROM products")).fetchall()]
+                if "short_id" not in cols:
+                    conn.execute(text("ALTER TABLE products ADD COLUMN short_id VARCHAR(32) NULL"))
+                    conn.execute(text("CREATE UNIQUE INDEX ix_products_short_id ON products (short_id)"))
+                # Backfill any existing products with missing short_id
+                rows = conn.execute(text("SELECT id, product_id FROM products WHERE short_id IS NULL")).fetchall()
+                for row in rows:
+                    sid = f"PRD-{row[1][-6:].upper()}"
+                    conn.execute(text("UPDATE products SET short_id = :sid WHERE id = :id"), {"sid": sid, "id": row[0]})
+            except Exception:
+                pass
     except Exception as exc:
         import logging
         logging.warning(f"Could not auto-create database tables on startup: {exc}")
@@ -138,6 +163,11 @@ def on_startup():
 def _make_product_id() -> str:
     """Generate a unique bytes32 product ID (0x-prefixed hex)."""
     return "0x" + hashlib.sha256(uuid.uuid4().bytes).hexdigest()
+
+
+def _make_short_id() -> str:
+    """Generate a clean human-readable short alias, e.g. PRD-8A3F12."""
+    return f"PRD-{uuid.uuid4().hex[:6].upper()}"
 
 
 def _compute_record_hash(name: str, brand: str, serial: str,
@@ -289,6 +319,41 @@ def chain_info():
     }
 
 
+class WhitelistAdminReq(BaseModel):
+    manufacturer_address: str
+
+
+@app.post("/admin/whitelist", tags=["admin"])
+def admin_whitelist_mfr(req: WhitelistAdminReq):
+    """Whitelist a manufacturer on-chain using the contract owner key."""
+    try:
+        receipt = chain_add_manufacturer(req.manufacturer_address)
+        return {
+            "status": "whitelisted",
+            "address": req.manufacturer_address,
+            "tx_hash": receipt["tx_hash"],
+            "block": receipt["block"],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Chain error: {e}")
+
+
+@app.post("/admin/revoke", tags=["admin"])
+def admin_revoke_mfr(req: WhitelistAdminReq):
+    """Revoke manufacturer on-chain authorization using the contract owner key."""
+    try:
+        receipt = chain_remove_manufacturer(req.manufacturer_address)
+        return {
+            "status": "revoked",
+            "address": req.manufacturer_address,
+            "tx_hash": receipt["tx_hash"],
+            "block": receipt["block"],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Chain error: {e}")
+
+
+
 
 @app.post("/products", response_model=ProductRegisterResponse,
           status_code=status.HTTP_201_CREATED, tags=["products"])
@@ -317,6 +382,7 @@ def register_product(
 
     # Generate IDs and hashes
     product_id  = _make_product_id()
+    short_id    = _make_short_id()
     record_hash = _compute_record_hash(name, brand, serial, image_sha256)
 
     # Register on-chain
@@ -332,6 +398,7 @@ def register_product(
     product = create_product(
         db,
         product_id=product_id,
+        short_id=short_id,
         name=name,
         brand=brand,
         serial=serial,
@@ -359,6 +426,7 @@ def register_product(
 
     return ProductRegisterResponse(
         product=ProductOut.model_validate(product),
+        short_id=short_id,
         qr_payload=qr_payload,
         nfc_payload=nfc_payload,
         tx_hash=receipt["tx_hash"],
@@ -415,7 +483,13 @@ def scan_product(req: ScanRequest, db: Session = Depends(get_db)):
     7. Return all signals and the verdict to the caller.
     """
     ts = req.timestamp or datetime.now(timezone.utc).replace(tzinfo=None)
-    product_id = req.product_id
+    raw_pid = req.product_id.strip()
+    product_id = raw_pid
+
+    # Resolve short_id (e.g. PRD-XXXXXX) to on-chain 32-byte product_id if provided
+    db_prod_pre = get_product_by_pid(db, raw_pid)
+    if db_prod_pre:
+        product_id = db_prod_pre.product_id
 
     # ── 1. Identity check ────────────────────────────────────────────────────
     if req.channel == "qr":
@@ -546,4 +620,38 @@ def get_scans(product_id: str, db: Session = Depends(get_db)):
 def get_recent_scans(limit: int = 100, db: Session = Depends(get_db)):
     """Return the most recent scans across all products for telemetry and dashboard."""
     return list_recent_scans(db, limit=limit)
+
+
+# ── Tags & Manufacturers API ──────────────────────────────────────────────────
+
+@app.get("/tags", response_model=list[TagOut], tags=["tags"])
+def get_tags(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """List all enrolled NFC / QR tags with their state and counter."""
+    return list_tags(db, skip=skip, limit=limit)
+
+
+@app.post("/tags/{uid}/state", response_model=TagOut, tags=["tags"])
+def update_tag_state(uid: str, state: str = Form(...), db: Session = Depends(get_db)):
+    """Update tag state between 'ok' and 'disputed' / 'deactivated'."""
+    tag = toggle_tag_state(db, uid, state)
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    return tag
+
+
+@app.get("/manufacturers", response_model=list[ManufacturerOut], tags=["manufacturers"])
+def get_manufacturers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """List all registered manufacturers."""
+    return list_manufacturers(db, skip=skip, limit=limit)
+
+
+@app.post("/manufacturers", response_model=ManufacturerOut, tags=["manufacturers"])
+def register_manufacturer_record(
+    address: str = Form(...),
+    name: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Enroll or update a manufacturer in the backend database."""
+    return create_manufacturer(db, address=address.strip(), name=name.strip())
+
 
