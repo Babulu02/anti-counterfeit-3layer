@@ -265,7 +265,7 @@ export default function BlockchainManagementPage() {
       {/* Contract Parameters */}
       <Card
         title="Deployed Smart Contract Configuration"
-        subtitle="Live state read directly from Ganache local EVM (Chain ID 1337)"
+        subtitle={`Live state read directly from EVM (${chainInfo?.chain_id === 11155111 ? "Ethereum Sepolia" : chainInfo?.chain_id === 80002 ? "Polygon Amoy" : "Ganache Local"})`}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -279,7 +279,11 @@ export default function BlockchainManagementPage() {
               <tr className="border-b border-stark-border/60">
                 <td className="py-2.5 text-text-secondary font-mono">EVM Network & Chain ID</td>
                 <td className="py-2.5 text-right font-mono text-text-heading font-medium">
-                  Ganache CLI (Chain ID 1337)
+                  {chainInfo?.chain_id === 11155111
+                    ? "Ethereum Sepolia (Chain ID 11155111)"
+                    : chainInfo?.chain_id === 80002
+                    ? "Polygon Amoy (Chain ID 80002)"
+                    : `Chain ID ${chainInfo?.chain_id || 1337}`}
                 </td>
               </tr>
               <tr className="border-b border-stark-border/60">

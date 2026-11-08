@@ -325,6 +325,13 @@ def chain_info():
     """Return public chain configuration for frontend and MetaMask interactions."""
     owner = None
     operator = None
+    chain_id = 11155111
+    try:
+        w3 = get_w3()
+        chain_id = w3.eth.chain_id
+    except Exception:
+        pass
+
     try:
         c = get_contract()
         owner = c.functions.owner().call()
@@ -335,7 +342,7 @@ def chain_info():
     return {
         "contract_address": settings.contract_address,
         "rpc_url": settings.rpc_url,
-        "chain_id": 1337,
+        "chain_id": chain_id,
         "owner": owner,
         "operator": operator,
     }
