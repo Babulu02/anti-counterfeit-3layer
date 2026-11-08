@@ -54,10 +54,12 @@ def get_contract() -> Contract:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _send_tx(w3: Web3, account: Any, fn_call) -> dict:
+def _send_tx(w3: Web3, account: Any, fn_call, wait_receipt: bool = True) -> dict:
     """
-    Build, sign and send a transaction.  Returns the receipt as a dict.
+    Build, sign and send a transaction. Returns the receipt or broadcast tx hash.
     Uses gas estimation + 20% buffer.
+    When wait_receipt=False, broadcasts immediately to Sepolia mempool without
+    blocking the HTTP response for 15-30s block confirmations.
     """
     nonce = w3.eth.get_transaction_count(account.address, "pending")
     gas_est = fn_call.estimate_gas({"from": account.address})
@@ -68,6 +70,16 @@ def _send_tx(w3: Web3, account: Any, fn_call) -> dict:
     })
     signed  = account.sign_transaction(tx)
     tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+    tx_hash_hex = "0x" + tx_hash.hex()
+
+    if not wait_receipt:
+        return {
+            "tx_hash": tx_hash_hex,
+            "status":  1,
+            "gas_used": int(gas_est),
+            "block":   0,
+        }
+
     receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
     return {
         "tx_hash": "0x" + receipt.transactionHash.hex(),
@@ -154,7 +166,7 @@ def chain_log_scan(product_id_hex: str, scan_hash: bytes, verdict_code: int) -> 
     account  = Account.from_key(s.operator_private_key)
     pid      = bytes.fromhex(product_id_hex.removeprefix("0x"))
     shash    = scan_hash if isinstance(scan_hash, bytes) else bytes.fromhex(scan_hash)
-    return _send_tx(w3, account, contract.functions.logScan(pid, shash, verdict_code))
+    return _send_tx(w3, account, contract.functions.logScan(pid, shash, verdict_code), wait_receipt=False)
 
 
 def chain_add_manufacturer(mfr_address: str) -> dict:
