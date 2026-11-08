@@ -1,175 +1,186 @@
-# anti-counterfeit-3layer
+# AETHER v3.0 — Intelligent Anti-Counterfeiting Platform
+### Holistic Anti-Counterfeiting Platform (HACP5 Research Alignment with Multi-Layer Cryptographic Extensions)
 
-A four-layer anti-counterfeiting research prototype combining Ethereum smart contracts, dynamic NFC CMAC + QR identity, ML spatio-temporal scan anomaly detection, multi-signal fusion, and MobileNetV2 visual consistency verification (extending and fixing HACP5, CMC 2025).
-
-> **Status:** All Phases 1–8 complete and verified. 129 automated tests passing.
+A complete, production-ready anti-counterfeiting platform combining **Ethereum Solidity smart contracts**, **NFC NTAG 424 SUN AuthentiCoding**, **signed dynamic QR codes**, **spatio-temporal ML anomaly detection**, **MobileNetV2 + OCR visual packaging verification**, and **three independent role-based portals**.
 
 ---
 
-## Architecture Overview
+## 🏛️ System Architecture
 
 ```
-Layer 1  →  Blockchain & Physical Identity
-              - ProductRegistry.sol (Solidity 0.8.20 on Ganache port 7546)
-              - Dual-channel: HMAC-signed QR + AES-128 CMAC rolling counter (NTAG 424 DNA emulation)
-              - Append-only on-chain verdict audit trail (logScan)
-
-Layer 2  →  ML Scan-Risk Behavioral Engine (Python, scikit-learn)
-              - Features: speed_kmh, burst frequency, device entropy, NFC counter freshness gap
-              - Models: FairRuleBaseline → IsolationForest → RandomForestClassifier
-              - Trained on 2,000 products with realistic noise; evaluated with held-out attack G_stealth_clone
-
-Layer 3  →  Multi-Signal Fusion Engine (FastAPI backend)
-              - Priority rules mapping signals into four verdicts:
-                Verified | Manual review | Suspicious activity | Unregistered product
-
-Layer 4  →  Optional Visual Image Signal (MobileNetV2, PyTorch)
-              - 1280-d unit-length feature embedding + cosine similarity
-              - Platt scaling calibration on Stanford Online Products dataset
-              - Graceful degradation: absent/ambiguous image is ignored (abstain band)
+                                  ┌──────────────────────────────┐
+                                  │      AETHER v3.0 ENGINE      │
+                                  └──────────────┬───────────────┘
+                                                 │
+                   ┌─────────────────────────────┼─────────────────────────────┐
+                   ▼                             ▼                             ▼
+    ┌─────────────────────────────┐┌───────────────────────────┐┌───────────────────────────┐
+    │     ADMIN PORTAL (/admin)   ││MANUFACTURER PORTAL (/mfr) ││   CONSUMER PORTAL (/root)  │
+    ├─────────────────────────────┤├───────────────────────────┤├───────────────────────────┤
+    │ • Security & Fraud Monitor  ││ • Factory Lot Batching    ││ • Camera QR Live Scanner   │
+    │ • Smart Contract Whitelist  ││ • Dynamic QR Tag Minting  ││ • NTAG 424 SUN NFC Tap     │
+    │ • Manufacturer KYC Approvals││ • AuthentiCoding Station  ││ • MobileNetV2 AI Matching  │
+    │ • Cryptographic Tag Auditing││ • Active Tag Lifecycle    ││ • Consumer Audit Ledger    │
+    │ • Real-time Threat Engine   ││ • Product Sales Analytics ││ • Counterfeit Reporting    │
+    └─────────────────────────────┘└───────────────────────────┘└───────────────────────────┘
 ```
 
 ---
 
-## Prerequisites
+## 🌟 The Three Independent Portals
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| Windows 10/11 | 64-bit | Operating system |
-| Python | 3.11.9 | Backend, ML, experiments (`backend/.venv`) |
-| Node.js | 24.20.0 | Frontend build and Ganache runtime |
-| npm | 11.19.0 | Package manager |
-| Truffle | 5.11.5 | Smart contract compilation and deployment |
-| Ganache CLI | 7.9.1 | Local Ethereum blockchain (`--port 7546`) |
-| MySQL | 9.x | Relational storage (`anticounterfeit`, `anticounterfeit_test`) |
+### 1. 🛡️ Admin Portal (`/admin/*`)
+*Designed for security officers, system auditors, and smart contract governors.*
+* **Overview (`/admin/overview`)**: Real-time telemetry, node health, active contract status, and live audit stream.
+* **Manufacturer Management (`/admin/manufacturers`)**: KYC application review, business verification, and on-chain whitelist/revoke triggers.
+* **Product Management (`/admin/products`)**: Complete searchable physical goods registry, SHA-256 metadata verification, and on-chain hashes.
+* **Blockchain Management (`/admin/blockchain`)**: Direct `ProductRegistry.sol` contract console, owner permissions, deterministic account directory.
+* **Security & Fraud Monitoring (`/admin/security`)**: Real-time detection of replay attacks, clone-first attacks, impossible travel, burst scanning, and investigator incident queue.
+* **NFC / QR Management (`/admin/tags`)**: Directory of physical 7-byte NFC UIDs, rolling counters, and emergency tag deactivation.
+* **Audit & Transaction Logs (`/admin/audit`)**: Unified immutable chronological log of blockchain txs, KYC approvals, and verifications.
+* **User & Role Management (`/admin/users`)**: RBAC permissions, Ethereum wallet key association, and account statuses.
+* **System Settings (`/admin/settings`)**: Health metrics for FastAPI, MySQL 9.x, Ganache 1337, MobileNetV2, and EasyOCR.
+
+### 2. 🏭 Manufacturer Portal (`/manufacturer/*`)
+*Designed for brand owners, factory managers, and production packaging lines.*
+* **Overview (`/manufacturer/overview`)**: Production floor metrics, active lots, verified customer scans, quick minting shortcuts.
+* **Company Profile (`/manufacturer/profile`)**: Corporate registration documents, jurisdiction, compliance email, and signing wallet address.
+* **Brand Management (`/manufacturer/brands`)**: Multi-brand portfolio management, trademark numbers, and product categories.
+* **Product Management (`/manufacturer/products`)**: Enrolled products catalog with short human IDs (`PRD-XXXXXX`) and on-chain bytes32 hashes.
+* **Batch Management (`/manufacturer/batches`)**: Manufacturing lot creator, unit counts, scheduled production dates, and expiration tracking.
+* **Tag Generation (`/manufacturer/generate-tags`)**: Full on-chain asset enrollment, reference packaging photo upload, MobileNetV2 embedding, and printable signed QR codes.
+* **NFC Encoding (`/manufacturer/nfc-encoding`)**: HACP5 AuthentiCoding & DynamicID programmer interface (AES-128 CMAC and rolling counter pairing).
+* **Tag Management (`/manufacturer/tags`)**: Inventory of active NFC tags bound to products with compromise deactivation controls.
+* **Encoding History (`/manufacturer/encoding-history`)**: Quality assurance audit log of hardware programmer sessions, unit yields, and operator stamps.
+* **Product Analytics (`/manufacturer/analytics`)**: Consumer verification metrics, authentic vs. suspicious ratios, and QR vs. NFC channel split.
+
+### 3. 👤 Consumer Portal (`/consumer/*` and `/`)
+*Designed for end-market shoppers, retail inspectors, and the general public.*
+* **Home (`/` or `/consumer`)**: Public educational landing page explaining the 3-layer anti-counterfeiting platform.
+* **Verify Product (`/consumer/verify`)**: Live camera QR scanner (`html5-qrcode`), manual Short ID input, NFC tap authenticator, and packaging photo upload.
+* **Verification Result (`/consumer/result`)**: Dedicated certificate of authenticity, complete multi-signal diagnostic proofs, and mark-sold action.
+* **Verification History (`/consumer/history`)**: Local verification ledger storing past scans and verdicts on the user's device.
+* **Report Counterfeit (`/consumer/report`)**: Public counterfeit reporting form with vendor details, photograph upload, and tracking ID.
+* **Product Information (`/consumer/products`)**: Searchable public catalog of certified genuine brands and products.
+* **Help & Support (`/consumer/help`)**: Visual step-by-step guides for QR scanning and NFC tapping, FAQs, and diagnostic guides.
+* **About AETHER (`/consumer/about`)**: Detailed scientific paper alignment comparing HACP5 core architecture with AETHER extensions.
 
 ---
 
-## Windows Run Steps (Step-by-Step)
+## 🎨 Enterprise Dual Theme System
 
-### 1. Start Ganache Blockchain (Terminal 1)
+AETHER includes an enterprise-grade Light and Dark mode theme system switchable via the navigation bar toggle or the operating system's preferred color scheme:
 
-In a dedicated PowerShell window:
+| Color Token | Light Theme | Dark Theme | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Background** | `#F3F6FA` | `#080D14` | Application canvas & base background |
+| **Cards** | `#FFFFFF` | `#111C29` | Container cards, modals, and tables |
+| **Primary Accent** | `#0788CE` | `#00BFFF` | Active links, primary buttons, accents |
+| **Headings** | `#142C43` | `#F1F6FC` | `h1`–`h4` typography, prominent titles |
+| **Secondary Text**| `#63768B` | `#9BAFC5` | Monospace tags, labels, table headers |
+| **Borders** | `#E1E8F0` | `#26384B` | Dividers, card borders, input strokes |
+| **Success** | `#16A36A` | `#10B981` | Verified verdicts, healthy node indicators |
+| **Warning** | `#E9A23B` | `#F59E0B` | Manual review alerts, sold status |
+| **Danger** | `#E05252` | `#EF4444` | Suspicious alerts, counterfeit warnings |
+
+---
+
+## 🚀 Step-by-Step Running Instructions
+
+### Prerequisites
+* Windows 10/11 (64-bit)
+* Python 3.11+
+* Node.js 18+ and npm
+* MySQL 8.x / 9.x
+* Ganache CLI (for local blockchain)
+
+---
+
+### Step 1: Start Ganache Blockchain (Terminal 1)
 ```powershell
 ganache --port 7546 --deterministic --accounts 10 --networkId 1337
 ```
-Leave this window running. Port 7546 matches `.env`.
+*Deterministic Account #0 (`0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1`) is the Contract Owner.*  
+*Deterministic Account #2 (`0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b`) is the Default Manufacturer.*
 
-### 2. Deploy Smart Contracts to Ganache
+---
 
+### Step 2: Deploy Smart Contract to Ganache
 ```powershell
 cd C:\Blockchain\anti-counterfeit-3layer\contracts
 truffle migrate --network cli --reset
 cd ..
 ```
-*Note: The contract deploys to `0xCfEB869F69431e42cdB54A4F4f105C19C080A601` on deterministic Ganache account 0.*
+*The `ProductRegistry.sol` contract deploys to `0xCfEB869F69431e42cdB54A4F4f105C19C080A601`.*
 
-### 3. Configure Environment Variables (`.env`)
+---
 
-Copy the template if not already done:
-```powershell
-Copy-Item .env.example .env
-```
-Ensure `.env` contains:
+### Step 3: Configure Environment (`.env`)
+Ensure `.env` in the root directory contains:
 ```ini
-DB_USER=ac_user
-DB_PASSWORD=your_password
+DB_USER=root
+DB_PASSWORD=your_mysql_password
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_NAME=anticounterfeit
-TEST_DB_NAME=anticounterfeit_test
+
 RPC_URL=http://127.0.0.1:7546
 CONTRACT_ADDRESS=0xCfEB869F69431e42cdB54A4F4f105C19C080A601
-SOP_ROOT=C:\Project-MF\Stanford_Online_Products
+
+IDENTITY_HMAC_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+NFC_MASTER_KEY=00112233445566778899aabbccddeeff
+
+OWNER_ADDRESS=0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1
+MANUFACTURER_ADDRESS=0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b
+MANUFACTURER_PRIVATE_KEY=0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c
 ```
 
-### 4. Run Database Migrations (Alembic)
+---
 
+### Step 4: Start FastAPI Backend Server (Terminal 2)
 ```powershell
-.\backend\.venv\Scripts\python.exe -m alembic upgrade head
+cd C:\Blockchain\anti-counterfeit-3layer
+.\backend\.venv\Scripts\uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
+*API documentation is available at `http://127.0.0.1:8000/docs`.*
 
-### 5. Start the FastAPI Backend Server (Terminal 2)
+---
 
+### Step 5: Start the Frontend Application (Terminal 3)
 ```powershell
-.\backend\.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-Swagger API docs will be available at `http://127.0.0.1:8000/docs`.
-
-### 6. Seed Demonstration Products
-
-```powershell
-.\backend\.venv\Scripts\python.exe backend/seed.py
-```
-Registers 20 demo products on-chain and in MySQL (`TC-0001` through `CV-0002`).
-
-### 7. Start the React Frontend Dev Server (Terminal 3)
-
-```powershell
-cd frontend
+cd C:\Blockchain\anti-counterfeit-3layer\frontend
 npm run dev
 ```
-Open `http://localhost:5173` in your browser.
-
-### 8. Run End-to-End Live Check Script
-
-```powershell
-.\backend\.venv\Scripts\python.exe experiments/live_check.py
-```
-Validates the entire 8-step live cycle (Health, Product Registration, Genuine QR, Genuine NFC, NFC Replay, Product Sale, Post-Sale Relocation Scan, and Unregistered Product Scan) directly against the live FastAPI server, Ganache, and MySQL.
+Open **`http://localhost:5173/`** in your web browser.
 
 ---
 
-## Running Research Experiments
+## 🧪 Testing Role Switching & Verification
 
-### Master Paper Evaluation Suite (`experiments/run_all.py`)
+1. **Consumer Verification Workflow**:
+   - Open `http://localhost:5173/consumer/verify`.
+   - Click **Start Camera** to scan a physical QR code, or enter a registered Short ID (e.g., `PRD-A49F2E`).
+   - Click **Run Verification Pipeline** to inspect multi-signal diagnostic proofs across Blockchain, Token Identity, and MobileNetV2 AI visual checks.
 
-```powershell
-.\backend\.venv\Scripts\python.exe experiments/run_all.py
-```
-Produces:
-- `experiments/results/attack_matrix.csv`: Every attack vs Static QR, HACP5 rewrite, Chain only, NFC CMAC, Fair Rule baseline, and Full Fusion.
-- `experiments/results/model_comparison.csv`: Fair Rule Baseline vs IsolationForest vs RandomForest (5 seeds, mean ± std).
-- `experiments/results/ablation.csv`: Full fusion vs No Chain, No ML, and No NFC.
-- `experiments/results/gas_latency.csv`: On-chain gas usage and live API latency over 200 requests (median and p95).
-- `experiments/results/race.csv`: Clone-first race results over 1,000 trials × 5 seeds.
-- `experiments/results/results.md`: Complete structured markdown report with reproduction commands.
+2. **Manufacturer Asset Minting Workflow**:
+   - Click the **Portal Switcher** in the header and select **Manufacturer Portal**.
+   - Navigate to `/manufacturer/generate-tags`.
+   - Enter product name, brand, serial, upload a packaging reference photo, and click **Execute On-Chain Minting**.
+   - Download the printable signed QR code and inspect the NTAG 424 SUN AuthentiCoding cryptograms.
 
-### Phase 8 MobileNetV2 Image Evaluation (`ml/image_signal/evaluate_sop.py`)
-
-```powershell
-.\backend\.venv\Scripts\python.exe ml/image_signal/evaluate_sop.py "C:\Project-MF\Stanford_Online_Products"
-```
-Evaluates MobileNetV2 feature extraction on Stanford Online Products:
-- ROC-AUC: 0.9115 overall (0.9574 random impostors, 0.8656 hard negatives).
-- Platt scaling calibration: 62.24% reduction in Expected Calibration Error (ECE from 0.1337 to 0.0505).
-- Generates `roc_curve.png` and `coverage_vs_accuracy.png` in `ml/image_signal/artifacts/`.
+3. **Admin Smart Contract Governance Workflow**:
+   - Click the **Portal Switcher** and select **Admin Portal**.
+   - Navigate to `/admin/blockchain` or `/admin/manufacturers`.
+   - Connect MetaMask with Account #0 to whitelist or revoke manufacturer privileges directly on the Ethereum blockchain.
+   - Review active threats, impossible travel incidents, and fraud logs on `/admin/security`.
 
 ---
 
-## Running Automated Tests
-
-```powershell
-# Run all 129 backend tests:
-.\backend\.venv\Scripts\pytest backend/tests -v
-
-# Run smart contract unit tests:
-cd contracts
-truffle test --network cli
-cd ..
-```
+## 📚 Architectural & Research Documentation
+* [`docs/PORTAL_ARCHITECTURE.md`](file:///C:/Blockchain/anti-counterfeit-3layer/docs/PORTAL_ARCHITECTURE.md) — Detailed specifications of all 27 role-based routes and RBAC boundaries.
+* [`docs/IMPROVEMENTS_OVER_BASE_PAPER.md`](file:///C:/Blockchain/anti-counterfeit-3layer/docs/IMPROVEMENTS_OVER_BASE_PAPER.md) — Scientific breakdown of HACP5 paper limitations and AETHER v3.0 contributions.
+* [`docs/HARDWARE_FREE_ALTERNATIVE_GUIDE.md`](file:///C:/Blockchain/anti-counterfeit-3layer/docs/HARDWARE_FREE_ALTERNATIVE_GUIDE.md) — Signed QR HMAC hardware-free alternative deployment guide.
+* [`docs/DATASET_AND_ATTACK_ANALYSIS.md`](file:///C:/Blockchain/anti-counterfeit-3layer/docs/DATASET_AND_ATTACK_ANALYSIS.md) — Security evaluation across 6 distinct attack vectors.
 
 ---
-
-## Phase Status Summary
-
-| Phase | Description | Status | Verification Metric |
-|-------|-------------|--------|---------------------|
-| **Phase 1** | Smart Contract (`ProductRegistry.sol`) | ✅ Complete | 7 truffle tests passing; gas measured in `gas.csv` |
-| **Phase 2** | QR & NFC Identity Modules (NTAG 424 DNA) | ✅ Complete | 67 pytest tests passing; clone-first race recovery: 100% |
-| **Phase 3** | FastAPI Backend + MySQL + web3.py v8 | ✅ Complete | 28 API integration tests passing; live DB migrations |
-| **Phase 4** | Scan-Risk ML Engine (2,000 products, 5 seeds) | ✅ Complete | Honest feature audit, held-out attack G, `FairRuleBaseline` |
-| **Phase 5** | Multi-Signal Fusion Engine (Layer 3) | ✅ Complete | 27 fusion rule tests passing; graceful degradation |
-| **Phase 6** | React + Vite + TailwindCSS Frontend | ✅ Complete | TypeScript compiled; dev server running on port 5173 |
-| **Phase 7** | Master Experiment Runner (`run_all.py`) | ✅ Complete | Generated attack matrix, model comparison, ablation, latency |
-| **Phase 8** | Image Signal (MobileNetV2, Platt Scaling) | ✅ Complete | 7 unit tests, ROC-AUC 0.9115 on SOP dataset, ECE -62.24% |
+&copy; 2026 AETHER Protocol. Built for advanced multi-layer physical asset security.
