@@ -42,19 +42,19 @@ export default function SystemSettingsPage() {
         {/* Subsystem 1: Backend API */}
         <Card title="FastAPI Engine (Python 3.11)" subtitle="Layer 1 & Layer 3 Cryptographic Coordinator">
           <div className="space-y-2 text-xs font-mono">
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">API ENDPOINT:</span>
-              <span className="text-text-heading font-semibold">http://127.0.0.1:8000</span>
+              <span className="text-text-heading font-semibold break-all">http://127.0.0.1:8000</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">HEALTH STATUS:</span>
               <span className="text-stark-emerald font-semibold uppercase">{health?.status || "OK (Active)"}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">UVICORN WORKERS:</span>
               <span className="text-text-heading">1 (Asynchronous Event Loop)</span>
             </div>
-            <div className="flex justify-between py-1.5">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5">
               <span className="text-text-secondary">CORS POLICY:</span>
               <span className="text-stark-cyan font-semibold">Enabled (Localhost & Cloud)</span>
             </div>
@@ -64,21 +64,21 @@ export default function SystemSettingsPage() {
         {/* Subsystem 2: Blockchain EVM */}
         <Card title="Ethereum EVM L1 Node" subtitle="Ganache Local & Smart Contract Runtime">
           <div className="space-y-2 text-xs font-mono">
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">RPC URL:</span>
-              <span className="text-text-heading font-semibold">{chainInfo?.rpc_url || "http://127.0.0.1:7546"}</span>
+              <span className="text-text-heading font-semibold break-all">{chainInfo?.rpc_url || "http://127.0.0.1:7546"}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">CHAIN ID:</span>
               <span className="text-text-heading font-semibold">1337 (Deterministic Ganache)</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">PRODUCTREGISTRY CONTRACT:</span>
               <span className="text-stark-cyan break-all font-semibold">
                 {chainInfo?.contract_address || "0xCfEB869F69431e42cdB54A4F4f105C19C080A601"}
               </span>
             </div>
-            <div className="flex justify-between py-1.5">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5">
               <span className="text-text-secondary">GAS OPTIMIZER:</span>
               <span className="text-stark-emerald font-semibold">Enabled (Runs: 200, London EVM)</span>
             </div>
@@ -88,21 +88,21 @@ export default function SystemSettingsPage() {
         {/* Subsystem 3: Database Engine */}
         <Card title="Relational Persistence" subtitle="MySQL 9.x Database Engine via SQLAlchemy 2.x">
           <div className="space-y-2 text-xs font-mono">
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">CONNECTION POOL:</span>
-              <span className="text-text-heading font-semibold">{health?.db || "mysql+pymysql (Healthy)"}</span>
+              <span className="text-text-heading font-semibold break-all">{health?.db || "mysql+pymysql (Healthy)"}</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">TABLE SCHEMAS:</span>
               <span className="text-text-heading font-semibold">products, scans, tags, manufacturers</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">PRIVACY STANDARD:</span>
               <span className="text-stark-emerald font-semibold">SHA-256 Device ID Hashing by Default</span>
             </div>
-            <div className="flex justify-between py-1.5">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5">
               <span className="text-text-secondary">OFF-CHAIN STORAGE:</span>
-              <span className="text-text-heading">/data/product-images (Local Media Storage)</span>
+              <span className="text-text-heading break-all">/data/product-images (Local Media Storage)</span>
             </div>
           </div>
         </Card>
@@ -110,21 +110,21 @@ export default function SystemSettingsPage() {
         {/* Subsystem 4: AI & Cryptography */}
         <Card title="AI Vision & Cryptographic Keying" subtitle="MobileNetV2, EasyOCR & HMAC Signing Core">
           <div className="space-y-2 text-xs font-mono">
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">VISUAL EMBEDDER:</span>
               <span className="text-text-heading font-semibold">PyTorch MobileNetV2 (1280-d L2 Vectors)</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">OCR VALIDATOR:</span>
               <span className="text-stark-emerald font-semibold">EasyOCR + Levenshtein Packaging Match</span>
             </div>
-            <div className="flex justify-between py-1.5 border-b border-stark-border/60">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5 border-b border-stark-border/60">
               <span className="text-text-secondary">NFC CRYPTOGRAPHY:</span>
               <span className="text-text-heading font-semibold">AES-128 CMAC (NTAG 424 SUN Emulated)</span>
             </div>
-            <div className="flex justify-between py-1.5">
+            <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1 py-1.5">
               <span className="text-text-secondary">QR SIGNING:</span>
-              <span className="text-stark-cyan font-semibold">HMAC-SHA256 (32-byte Cryptographic Secret)</span>
+              <span className="text-stark-cyan break-all font-semibold">HMAC-SHA256 (32-byte Cryptographic Secret)</span>
             </div>
           </div>
         </Card>

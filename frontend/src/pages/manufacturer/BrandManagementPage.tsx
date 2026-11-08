@@ -89,7 +89,7 @@ export default function BrandManagementPage() {
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className="px-4 py-2 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center gap-1.5"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[44px] text-center"
         >
           <span>+</span>
           <span>Register Brand</span>
@@ -127,8 +127,8 @@ export default function BrandManagementPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-bg-card border border-stark-border shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-bg-card border border-stark-border shadow-2xl p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stark-border pb-3">
               <h3 className="text-base font-bold text-text-heading">Register New Brand</h3>
               <button

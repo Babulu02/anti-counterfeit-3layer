@@ -37,12 +37,12 @@ export const ManufacturerLayout: React.FC = () => {
 
       {/* ── Manufacturer Sidebar ── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-bg-card border-r border-stark-border flex flex-col transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-[85vw] max-w-xs sm:w-72 bg-bg-card border-r border-stark-border flex flex-col transition-transform duration-200 lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand Header */}
-        <div className="p-5 border-b border-stark-border flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-stark-border flex items-center justify-between">
           <Link to="/manufacturer/overview" className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-stark-cyan/10 border border-stark-cyan/30 flex items-center justify-center text-stark-cyan font-mono font-bold text-lg shadow-sm">
               🏭
@@ -62,7 +62,8 @@ export const ManufacturerLayout: React.FC = () => {
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-text-secondary hover:bg-bg-elevated"
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg text-text-secondary hover:bg-bg-elevated"
+            aria-label="Close Sidebar"
           >
             ✕
           </button>
@@ -135,12 +136,13 @@ export const ManufacturerLayout: React.FC = () => {
       {/* ── Main Manufacturer Content Wrapper ── */}
       <div className="flex-1 lg:pl-72 flex flex-col min-w-0">
         {/* Top Header */}
-        <header className="sticky top-0 z-30 h-16 bg-bg-card/90 backdrop-blur-md border-b border-stark-border px-4 sm:px-6 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-30 h-16 bg-bg-card/90 backdrop-blur-md border-b border-stark-border px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl border border-stark-border text-text-secondary hover:bg-bg-elevated"
+              className="lg:hidden w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl border border-stark-border text-text-secondary hover:bg-bg-elevated text-lg"
+              aria-label="Open Manufacturer Menu"
             >
               ☰
             </button>
@@ -155,13 +157,14 @@ export const ManufacturerLayout: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Theme Toggle Button */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-text-secondary hover:text-text-heading transition-colors"
+              className="w-10 h-10 min-w-[40px] min-h-[40px] flex items-center justify-center rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-text-secondary hover:text-text-heading transition-colors"
               title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
+              aria-label="Toggle Theme"
             >
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
@@ -181,7 +184,7 @@ export const ManufacturerLayout: React.FC = () => {
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
           <Outlet />
         </main>
 

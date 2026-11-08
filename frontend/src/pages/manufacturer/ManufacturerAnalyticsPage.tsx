@@ -102,7 +102,7 @@ export default function ManufacturerAnalyticsPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-xs font-mono">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 text-xs font-mono">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-stark-emerald" />
                 <span className="text-text-secondary">Verified: {verified}</span>
@@ -130,7 +130,7 @@ export default function ManufacturerAnalyticsPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 text-xs font-mono">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-stark-cyan" />
                 <span className="text-text-secondary">QR Code (Mobile Camera): {qrCount}</span>

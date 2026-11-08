@@ -40,13 +40,15 @@ export default function ConsumerResultPage() {
               <span className="text-[10px] font-mono tracking-widest text-text-muted uppercase block">
                 AUTHENTICATION VERDICT
               </span>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-3xl font-extrabold text-text-heading">{verdictParam}</span>
-                <VerdictBadge verdict={verdictParam} size="lg" />
+              <div className="flex flex-col xs:flex-row xs:items-center gap-2 sm:gap-3 mt-1">
+                <span className="text-2xl sm:text-3xl font-extrabold text-text-heading break-words">{verdictParam}</span>
+                <div>
+                  <VerdictBadge verdict={verdictParam} size="lg" />
+                </div>
               </div>
             </div>
 
-            <div className="text-right font-mono text-xs">
+            <div className="text-left sm:text-right font-mono text-xs">
               <span className="text-text-muted block text-[10px]">TIME OF AUDIT</span>
               <span className="text-text-heading">{new Date().toLocaleString()}</span>
             </div>
@@ -63,7 +65,7 @@ export default function ConsumerResultPage() {
             Product Identification Ledger
           </h3>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
             <div className="p-3 rounded-xl bg-bg-main border border-stark-border">
               <span className="text-text-muted block text-[10px]">ASSET NAME</span>
               <span className="font-semibold text-text-heading mt-0.5 block">{product?.name || "Verified Product"}</span>
@@ -98,16 +100,16 @@ export default function ConsumerResultPage() {
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3 pt-4 border-t border-stark-border justify-between">
+        <div className="mt-6 flex flex-col sm:flex-row gap-3 pt-4 border-t border-stark-border justify-between">
           <Link
             to="/consumer/verify"
-            className="px-4 py-2 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm"
+            className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center justify-center text-center"
           >
             Scan Another Product
           </Link>
           <Link
             to="/consumer/history"
-            className="px-4 py-2 rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-semibold text-text-secondary"
+            className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-semibold text-text-secondary flex items-center justify-center text-center"
           >
             View Verification History &rarr;
           </Link>

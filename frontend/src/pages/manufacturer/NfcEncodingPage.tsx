@@ -95,7 +95,7 @@ export default function NfcEncodingPage() {
                 <select
                   value={selectedBatch}
                   onChange={(e) => setSelectedBatch(e.target.value)}
-                  className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2 text-text-primary focus:outline-none focus:border-stark-cyan"
+                  className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
                 >
                   <option value="LOT-2026-CH-901">LOT-2026-CH-901 (AetherCare 500 units)</option>
                   <option value="LOT-2026-CH-902">LOT-2026-CH-902 (BioShield 1200 units)</option>
@@ -103,21 +103,21 @@ export default function NfcEncodingPage() {
               </div>
 
               <div className="p-3.5 rounded-xl bg-bg-main border border-stark-border space-y-2">
-                <div className="flex justify-between">
+                <div className="flex flex-col xs:flex-row xs:justify-between gap-0.5">
                   <span className="text-text-secondary">CHIP PROFILE:</span>
                   <span className="text-text-heading font-semibold">NXP NTAG 424 SUN (AES-128)</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col xs:flex-row xs:justify-between gap-0.5">
                   <span className="text-text-secondary">PROTOCOL:</span>
                   <span className="text-stark-cyan font-semibold">HACP5 DynamicID AuthentiCoding</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col xs:flex-row xs:justify-between gap-0.5">
                   <span className="text-text-secondary">TAGS ENCODED IN BATCH:</span>
                   <span className="text-stark-emerald font-semibold">{encodingCount} Units</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col xs:flex-row xs:justify-between gap-0.5">
                   <span className="text-text-secondary">LAST GENERATED CMAC:</span>
-                  <span className="text-text-heading font-mono text-[11px]">{lastCmac}</span>
+                  <span className="text-text-heading font-mono text-[11px] break-all">{lastCmac}</span>
                 </div>
               </div>
 
@@ -125,7 +125,7 @@ export default function NfcEncodingPage() {
                 type="button"
                 disabled={isEncoding}
                 onClick={triggerEncode}
-                className="w-full py-3.5 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3.5 min-h-[44px] rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isEncoding ? (
                   <>

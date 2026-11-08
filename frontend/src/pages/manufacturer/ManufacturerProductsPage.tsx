@@ -54,7 +54,7 @@ export default function ManufacturerProductsPage() {
           placeholder="Filter by Short ID, Product Name, Brand, or Serial..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-md rounded-xl bg-bg-card border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
+          className="w-full max-w-md rounded-xl bg-bg-card border border-stark-border px-3.5 py-2.5 min-h-[44px] text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan shadow-sm"
         />
       </div>
 

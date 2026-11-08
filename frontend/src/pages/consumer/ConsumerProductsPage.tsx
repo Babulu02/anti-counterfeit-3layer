@@ -43,7 +43,7 @@ export default function ConsumerProductsPage() {
           placeholder="Search genuine brands, product names, short codes..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-xl bg-bg-card border border-stark-border px-3.5 py-2.5 text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan shadow-sm"
+          className="w-full rounded-xl bg-bg-card border border-stark-border px-3.5 py-2.5 min-h-[44px] text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan shadow-sm"
         />
       </div>
 
@@ -80,7 +80,7 @@ export default function ConsumerProductsPage() {
                 </span>
                 <Link
                   to={`/consumer/verify?pid=${p.short_id || p.product_id}`}
-                  className="text-xs font-mono font-bold text-stark-cyan hover:underline"
+                  className="px-3 py-1.5 min-h-[38px] rounded-lg bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-mono font-bold text-stark-cyan flex items-center justify-center text-center"
                 >
                   Verify Authenticity &rarr;
                 </Link>

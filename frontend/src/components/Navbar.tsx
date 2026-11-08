@@ -256,7 +256,7 @@ export default function Navbar() {
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 rounded-lg bg-bg-card border border-stark-border text-text-secondary hover:text-text-primary"
+            className="p-2 min-h-[40px] min-w-[40px] rounded-lg bg-bg-card border border-stark-border text-text-secondary hover:text-text-primary flex items-center justify-center"
             aria-label="Toggle Theme"
           >
             {theme === "dark" ? (
@@ -272,7 +272,7 @@ export default function Navbar() {
 
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="p-2 rounded-lg bg-bg-card border border-stark-border text-text-secondary hover:text-text-primary"
+            className="p-2 min-h-[40px] min-w-[40px] rounded-lg bg-bg-card border border-stark-border text-text-secondary hover:text-text-primary flex items-center justify-center"
             aria-label="Toggle Navigation"
           >
             {mobileOpen ? (
@@ -300,7 +300,7 @@ export default function Navbar() {
                 key={item.to}
                 to={item.to}
                 onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium ${
+                className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-lg text-sm font-medium ${
                   active
                     ? "bg-bg-card text-stark-cyan border border-stark-cyan/40 shadow-sm"
                     : "text-text-secondary hover:bg-bg-card hover:text-text-primary"
@@ -314,13 +314,13 @@ export default function Navbar() {
 
           <div className="pt-2 border-t border-stark-border mt-2 space-y-2">
             {account ? (
-              <div className="text-xs text-text-secondary font-mono px-3 py-1.5 bg-bg-card rounded border border-stark-border">
+              <div className="text-xs text-text-secondary font-mono px-3 py-2 bg-bg-card rounded-lg border border-stark-border break-all">
                 Wallet: {account.slice(0, 10)}...{account.slice(-6)}
               </div>
             ) : isMetaMaskAvailable() ? (
               <button
                 onClick={handleConnect}
-                className="w-full py-2 bg-stark-cyan/15 border border-stark-cyan/50 text-stark-cyan rounded-lg text-xs font-semibold"
+                className="w-full py-2.5 min-h-[44px] bg-stark-cyan/15 border border-stark-cyan/50 text-stark-cyan rounded-xl text-xs font-semibold flex items-center justify-center"
               >
                 Connect MetaMask
               </button>

@@ -135,19 +135,19 @@ export default function ManufacturerManagementPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={refreshOnChainStatuses}
             disabled={checking}
-            className="px-3.5 py-2 rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-mono text-stark-cyan transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-mono text-stark-cyan transition-colors min-h-[44px] flex items-center justify-center text-center"
           >
             {checking ? "Checking Ledger..." : "🔄 Verify On-Chain"}
           </button>
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center gap-1.5"
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center justify-center gap-1.5 min-h-[44px] text-center"
           >
             <span>+</span>
             <span>Enroll Manufacturer</span>
@@ -177,13 +177,13 @@ export default function ManufacturerManagementPage() {
       )}
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-stark-border pb-3">
+      <div className="flex items-center gap-2 border-b border-stark-border pb-3 overflow-x-auto no-scrollbar">
         {(["all", "approved", "pending", "rejected"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setFilter(tab)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono uppercase transition-all ${
+            className={`px-3.5 py-2 min-h-[40px] shrink-0 rounded-xl text-xs font-mono uppercase transition-all flex items-center justify-center ${
               filter === tab
                 ? "bg-stark-cyan text-white font-bold shadow-sm"
                 : "bg-bg-card hover:bg-bg-elevated border border-stark-border text-text-secondary"
@@ -310,8 +310,8 @@ export default function ManufacturerManagementPage() {
 
       {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-bg-card border border-stark-border shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-bg-card border border-stark-border shadow-2xl p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stark-border pb-3">
               <h3 className="text-base font-bold text-text-heading">Enroll New Manufacturer Application</h3>
               <button

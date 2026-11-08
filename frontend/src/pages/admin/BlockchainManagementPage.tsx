@@ -267,39 +267,35 @@ export default function BlockchainManagementPage() {
         title="Deployed Smart Contract Configuration"
         subtitle={`Live state read directly from EVM (${chainInfo?.chain_id === 11155111 ? "Ethereum Sepolia" : chainInfo?.chain_id === 80002 ? "Polygon Amoy" : "Ganache Local"})`}
       >
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <tbody>
-              <tr className="border-b border-stark-border/60">
-                <td className="py-2.5 text-text-secondary font-mono">ProductRegistry Contract Address</td>
-                <td className="py-2.5 text-right font-mono text-stark-cyan break-all font-semibold">
-                  {contractAddress || "Loading..."}
-                </td>
-              </tr>
-              <tr className="border-b border-stark-border/60">
-                <td className="py-2.5 text-text-secondary font-mono">EVM Network & Chain ID</td>
-                <td className="py-2.5 text-right font-mono text-text-heading font-medium">
-                  {chainInfo?.chain_id === 11155111
-                    ? "Ethereum Sepolia (Chain ID 11155111)"
-                    : chainInfo?.chain_id === 80002
-                    ? "Polygon Amoy (Chain ID 80002)"
-                    : `Chain ID ${chainInfo?.chain_id || 1337}`}
-                </td>
-              </tr>
-              <tr className="border-b border-stark-border/60">
-                <td className="py-2.5 text-text-secondary font-mono">Contract Deployer / Owner (`onlyOwner`)</td>
-                <td className="py-2.5 text-right font-mono text-text-heading break-all">
-                  {contractOwner || "Loading..."}
-                </td>
-              </tr>
-              <tr className="border-b border-stark-border/60">
-                <td className="py-2.5 text-text-secondary font-mono">Backend Operator Account (`onlyOperator`)</td>
-                <td className="py-2.5 text-right font-mono text-text-heading break-all">
-                  {contractOperator || "Loading..."}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-3 font-mono text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-stark-border/60 gap-1">
+            <span className="text-text-secondary">ProductRegistry Contract Address</span>
+            <span className="text-stark-cyan break-all font-semibold sm:text-right">
+              {contractAddress || "Loading..."}
+            </span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-stark-border/60 gap-1">
+            <span className="text-text-secondary">EVM Network & Chain ID</span>
+            <span className="text-text-heading font-medium sm:text-right">
+              {chainInfo?.chain_id === 11155111
+                ? "Ethereum Sepolia (Chain ID 11155111)"
+                : chainInfo?.chain_id === 80002
+                ? "Polygon Amoy (Chain ID 80002)"
+                : `Chain ID ${chainInfo?.chain_id || 1337}`}
+            </span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 border-b border-stark-border/60 gap-1">
+            <span className="text-text-secondary">Contract Deployer / Owner (`onlyOwner`)</span>
+            <span className="text-text-heading break-all sm:text-right">
+              {contractOwner || "Loading..."}
+            </span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between py-2 gap-1">
+            <span className="text-text-secondary">Backend Operator Account (`onlyOperator`)</span>
+            <span className="text-text-heading break-all sm:text-right">
+              {contractOperator || "Loading..."}
+            </span>
+          </div>
         </div>
       </Card>
 
@@ -310,48 +306,48 @@ export default function BlockchainManagementPage() {
       >
         <div className="space-y-4">
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-1 mb-1.5">
               <label className="text-xs font-medium text-text-secondary font-mono">
                 Target Manufacturer Address
               </label>
               <button
                 type="button"
                 onClick={() => setTargetAddress("0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b")}
-                className="text-[11px] font-mono text-stark-cyan hover:underline"
+                className="text-[11px] font-mono text-stark-cyan hover:underline self-start xs:self-auto"
               >
                 Use Account #2 (Default in .env)
               </button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 type="text"
                 value={targetAddress}
                 onChange={(e) => setTargetAddress(e.target.value.trim())}
                 placeholder="0x..."
-                className="flex-1 rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
+                className="w-full sm:flex-1 rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan min-h-[44px]"
               />
               <button
                 type="button"
                 onClick={() => refreshTargetStatus(targetAddress)}
                 disabled={checkingStatus}
-                className="px-3.5 py-2 rounded-lg bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-semibold text-text-secondary hover:text-text-heading transition-colors"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-semibold text-text-secondary hover:text-text-heading transition-colors min-h-[44px] flex items-center justify-center shrink-0"
               >
                 {checkingStatus ? "Checking..." : "Verify Status"}
               </button>
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-bg-main border border-stark-border flex items-center justify-between">
+          <div className="p-3.5 rounded-xl bg-bg-main border border-stark-border flex flex-col xs:flex-row xs:items-center justify-between gap-2">
             <span className="text-xs text-text-secondary">On-Chain Whitelist Status:</span>
             {checkingStatus ? (
               <span className="text-xs font-mono text-text-secondary">Querying ledger...</span>
             ) : targetIsWhitelisted === true ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-stark-emerald/10 border border-stark-emerald/30 text-stark-emerald font-mono text-xs font-bold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stark-emerald/10 border border-stark-emerald/30 text-stark-emerald font-mono text-xs font-bold self-start xs:self-auto">
                 <span className="w-1.5 h-1.5 rounded-full bg-stark-emerald" />
                 WHITELISTED AUTHORIZED
               </span>
             ) : targetIsWhitelisted === false ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-stark-red/10 border border-stark-red/30 text-stark-red font-mono text-xs font-bold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stark-red/10 border border-stark-red/30 text-stark-red font-mono text-xs font-bold self-start xs:self-auto">
                 <span className="w-1.5 h-1.5 rounded-full bg-stark-red" />
                 NOT WHITELISTED
               </span>
@@ -365,7 +361,7 @@ export default function BlockchainManagementPage() {
               type="button"
               onClick={handleWhitelist}
               disabled={busy || !isOwner}
-              className="py-2.5 px-4 rounded-xl bg-stark-emerald hover:opacity-95 text-white font-semibold text-xs tracking-wide shadow-md transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              className="py-3 px-4 min-h-[44px] rounded-xl bg-stark-emerald hover:opacity-95 text-white font-semibold text-xs tracking-wide shadow-md transition-all disabled:opacity-40 flex items-center justify-center gap-2 text-center"
             >
               <span>✨</span>
               <span>Whitelist via MetaMask (addManufacturer)</span>
@@ -375,7 +371,7 @@ export default function BlockchainManagementPage() {
               type="button"
               onClick={handleRevoke}
               disabled={busy || !isOwner}
-              className="py-2.5 px-4 rounded-xl bg-stark-red hover:opacity-95 text-white font-semibold text-xs tracking-wide shadow-md transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+              className="py-3 px-4 min-h-[44px] rounded-xl bg-stark-red hover:opacity-95 text-white font-semibold text-xs tracking-wide shadow-md transition-all disabled:opacity-40 flex items-center justify-center gap-2 text-center"
             >
               <span>🚫</span>
               <span>Revoke Authorization (removeManufacturer)</span>

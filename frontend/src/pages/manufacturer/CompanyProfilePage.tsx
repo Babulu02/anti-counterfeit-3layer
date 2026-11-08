@@ -44,7 +44,7 @@ export default function CompanyProfilePage() {
 
       {/* KYC Status Banner */}
       <div
-        className={`p-4 rounded-xl border text-xs flex items-center justify-between gap-4 ${
+        className={`p-4 rounded-xl border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
           isApproved
             ? "bg-stark-emerald/10 border-stark-emerald/30 text-stark-emerald"
             : "bg-stark-amber/10 border-stark-amber/30 text-stark-amber"
@@ -64,7 +64,7 @@ export default function CompanyProfilePage() {
           </div>
         </div>
 
-        <span className="px-3 py-1 rounded-full font-mono text-[11px] font-bold uppercase bg-bg-card border border-stark-border">
+        <span className="px-3 py-1 rounded-full font-mono text-[11px] font-bold uppercase bg-bg-card border border-stark-border shrink-0">
           {currentManufacturerApp?.status || "PENDING"}
         </span>
       </div>
@@ -87,7 +87,7 @@ export default function CompanyProfilePage() {
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="e.g. Acme Pharmaceuticals AG"
-                className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
+                className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
               />
             </div>
 
@@ -99,7 +99,7 @@ export default function CompanyProfilePage() {
                 value={regNumber}
                 onChange={(e) => setRegNumber(e.target.value)}
                 placeholder="e.g. CHE-109.821.432"
-                className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
+                className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
               />
             </div>
           </div>
@@ -113,7 +113,7 @@ export default function CompanyProfilePage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="compliance@company.com"
-                className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
+                className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
               />
             </div>
 
@@ -125,7 +125,7 @@ export default function CompanyProfilePage() {
                 value={jurisdiction}
                 onChange={(e) => setJurisdiction(e.target.value)}
                 placeholder="e.g. Basel, Switzerland"
-                className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
+                className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
               />
             </div>
           </div>
@@ -137,7 +137,7 @@ export default function CompanyProfilePage() {
               value={brands}
               onChange={(e) => setBrands(e.target.value)}
               placeholder="e.g. AetherCare, BioShield, Chronos"
-              className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
+              className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
             />
           </div>
 
@@ -156,7 +156,7 @@ export default function CompanyProfilePage() {
           <div className="flex justify-end pt-3 border-t border-stark-border">
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-stark-cyan text-white font-bold hover:bg-stark-cyan/90 transition-all shadow-md"
+              className="w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl bg-stark-cyan text-white font-bold hover:bg-stark-cyan/90 transition-all shadow-md flex items-center justify-center text-center"
             >
               Update & Resubmit Verification
             </button>

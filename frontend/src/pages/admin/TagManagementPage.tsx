@@ -64,13 +64,13 @@ export default function TagManagementPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-stark-border pb-3">
+      <div className="flex overflow-x-auto no-scrollbar sm:flex-wrap items-center gap-2 border-b border-stark-border pb-3">
         {(["all", "ok", "disputed"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setFilter(tab)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono uppercase transition-all ${
+            className={`whitespace-nowrap min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-mono uppercase transition-all flex items-center justify-center ${
               filter === tab
                 ? "bg-stark-cyan text-white font-bold"
                 : "bg-bg-card hover:bg-bg-elevated border border-stark-border text-text-secondary"

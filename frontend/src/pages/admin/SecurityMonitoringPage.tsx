@@ -148,11 +148,11 @@ export default function SecurityMonitoringPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-stark-border pb-3">
+      <div className="flex overflow-x-auto no-scrollbar sm:flex-wrap items-center gap-2 border-b border-stark-border pb-3">
         <button
           type="button"
           onClick={() => setFilterAttack("all")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+          className={`whitespace-nowrap min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center ${
             filterAttack === "all"
               ? "bg-stark-red text-white font-bold"
               : "bg-bg-card border border-stark-border text-text-secondary hover:bg-bg-elevated"
@@ -165,7 +165,7 @@ export default function SecurityMonitoringPage() {
             key={cat}
             type="button"
             onClick={() => setFilterAttack(cat)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+            className={`whitespace-nowrap min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center ${
               filterAttack === cat
                 ? "bg-stark-red text-white font-bold"
                 : "bg-bg-card border border-stark-border text-text-secondary hover:bg-bg-elevated"
@@ -204,7 +204,7 @@ export default function SecurityMonitoringPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 font-mono text-xs">
+                    <div className="flex flex-wrap sm:flex-nowrap items-center justify-between sm:justify-end gap-2 font-mono text-xs w-full sm:w-auto mt-2 sm:mt-0">
                       {s.risk_score !== null && (
                         <span className="px-2 py-0.5 rounded bg-bg-elevated border border-stark-border text-text-heading">
                           Risk: <strong>{s.risk_score.toFixed(3)}</strong>
@@ -213,7 +213,7 @@ export default function SecurityMonitoringPage() {
                       <button
                         type="button"
                         onClick={() => setActiveScan(activeScan?.id === s.id ? null : s)}
-                        className="px-3 py-1 rounded bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-[11px] text-stark-cyan"
+                        className="w-full sm:w-auto px-3.5 py-1.5 min-h-[38px] rounded-lg bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-[11px] text-stark-cyan flex items-center justify-center text-center"
                       >
                         {activeScan?.id === s.id ? "Hide Investigation" : "Investigate & Add Notes"}
                       </button>
@@ -253,18 +253,18 @@ export default function SecurityMonitoringPage() {
                         </div>
                       )}
 
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <input
                           type="text"
                           placeholder="Record investigation findings, vendor contact, or containment steps..."
                           value={newNote}
                           onChange={(e) => setNewNote(e.target.value)}
-                          className="flex-1 rounded-lg bg-bg-input border border-stark-border px-3 py-1.5 text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
+                          className="flex-1 rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
                         />
                         <button
                           type="button"
                           onClick={() => saveNote(s.id)}
-                          className="px-3.5 py-1.5 rounded-lg bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm"
+                          className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center justify-center text-center"
                         >
                           Add Note
                         </button>

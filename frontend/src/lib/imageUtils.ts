@@ -69,3 +69,4 @@ export async function resizeImageFile(
     reader.readAsDataURL(file);
   });
 }
+

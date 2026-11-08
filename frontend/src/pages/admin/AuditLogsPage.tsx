@@ -104,7 +104,7 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-stark-border pb-3">
+      <div className="flex overflow-x-auto no-scrollbar sm:flex-wrap items-center gap-2 border-b border-stark-border pb-3">
         {[
           { key: "all", label: "All Audit Events" },
           { key: "BLOCKCHAIN_TX", label: "Blockchain Tx & Assets" },
@@ -116,7 +116,7 @@ export default function AuditLogsPage() {
             key={tab.key}
             type="button"
             onClick={() => setFilterCategory(tab.key)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-mono transition-all ${
+            className={`whitespace-nowrap min-h-[38px] px-3.5 py-1.5 rounded-xl text-xs font-mono transition-all flex items-center justify-center ${
               filterCategory === tab.key
                 ? "bg-stark-cyan text-white font-bold"
                 : "bg-bg-card hover:bg-bg-elevated border border-stark-border text-text-secondary"

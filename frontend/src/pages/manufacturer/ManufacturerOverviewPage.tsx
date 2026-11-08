@@ -41,10 +41,10 @@ export default function ManufacturerOverviewPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Link
             to="/manufacturer/generate-tags"
-            className="px-4 py-2 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center gap-1.5"
+            className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center justify-center gap-1.5"
           >
             <span>⚡</span>
             <span>Enroll New Asset</span>
@@ -54,7 +54,7 @@ export default function ManufacturerOverviewPage() {
 
       {/* KYC / On-Chain Status Alert */}
       {!isApproved && (
-        <div className="p-4 rounded-xl bg-stark-amber/10 border border-stark-amber/30 text-stark-amber text-xs flex items-center justify-between gap-4">
+        <div className="p-4 rounded-xl bg-stark-amber/10 border border-stark-amber/30 text-stark-amber text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="text-xl">⚠️</span>
             <div>
@@ -66,7 +66,7 @@ export default function ManufacturerOverviewPage() {
           </div>
           <Link
             to="/manufacturer/profile"
-            className="px-3 py-1.5 rounded-lg bg-stark-amber/20 hover:bg-stark-amber/30 text-stark-amber font-semibold shrink-0"
+            className="w-full sm:w-auto px-4 py-2 min-h-[38px] rounded-lg bg-stark-amber/20 hover:bg-stark-amber/30 text-stark-amber font-semibold shrink-0 flex items-center justify-center text-center"
           >
             View KYC Details &rarr;
           </Link>

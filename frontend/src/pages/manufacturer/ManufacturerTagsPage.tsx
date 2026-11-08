@@ -109,7 +109,7 @@ export default function ManufacturerTagsPage() {
                           type="button"
                           disabled={isBusy}
                           onClick={() => toggleTag(t)}
-                          className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                          className={`px-3.5 py-1.5 min-h-[38px] rounded-lg text-[11px] font-bold transition-all ${
                             t.state === "ok"
                               ? "bg-stark-red/10 hover:bg-stark-red/20 text-stark-red border border-stark-red/30"
                               : "bg-stark-emerald/10 hover:bg-stark-emerald/20 text-stark-emerald border border-stark-emerald/30"

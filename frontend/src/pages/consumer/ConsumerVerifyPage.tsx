@@ -243,31 +243,31 @@ export default function ConsumerVerifyPage() {
       </div>
 
       {/* ── Channel Selector Tabs ── */}
-      <div className="flex justify-center">
-        <div className="inline-flex p-1.5 rounded-2xl bg-bg-card border border-stark-border shadow-sm">
+      <div className="w-full sm:w-auto flex justify-center">
+        <div className="grid grid-cols-2 sm:inline-flex w-full sm:w-auto p-1.5 rounded-2xl bg-bg-card border border-stark-border shadow-sm gap-1 sm:gap-0">
           <button
             type="button"
             onClick={() => setChannel("qr")}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-mono font-bold transition-all ${
+            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-xs font-mono font-bold transition-all min-h-[44px] ${
               channel === "qr"
                 ? "bg-stark-cyan text-white shadow-md"
                 : "text-text-secondary hover:text-text-heading"
             }`}
           >
             <span>📷</span>
-            <span>QR Code Scanner</span>
+            <span>QR Scanner</span>
           </button>
           <button
             type="button"
             onClick={() => setChannel("nfc")}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-mono font-bold transition-all ${
+            className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-xs font-mono font-bold transition-all min-h-[44px] ${
               channel === "nfc"
                 ? "bg-stark-cyan text-white shadow-md"
                 : "text-text-secondary hover:text-text-heading"
             }`}
           >
             <span>📡</span>
-            <span>NFC Tap Authentication</span>
+            <span>NFC Tap</span>
           </button>
         </div>
       </div>
@@ -505,7 +505,7 @@ export default function ConsumerVerifyPage() {
           <div className="space-y-5">
             {/* Hero Verdict Banner */}
             <div
-              className={`p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+              className={`p-4 sm:p-5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
                 result.verdict === "Verified"
                   ? "bg-stark-emerald/10 border-stark-emerald/30 text-stark-emerald"
                   : result.verdict === "Suspicious activity"
@@ -515,21 +515,23 @@ export default function ConsumerVerifyPage() {
                   : "bg-bg-elevated border-stark-border text-text-secondary"
               }`}
             >
-              <div className="space-y-1">
+              <div className="space-y-1.5 w-full sm:w-auto">
                 <span className="text-[10px] font-mono tracking-widest uppercase block opacity-80">
                   FINAL VERDICT // MULTI-SIGNAL FUSION
                 </span>
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-extrabold tracking-tight">{result.verdict}</span>
-                  <VerdictBadge verdict={result.verdict} size="lg" />
+                <div className="flex flex-col xs:flex-row xs:items-center gap-2 sm:gap-3">
+                  <span className="text-2xl sm:text-3xl font-extrabold tracking-tight break-words">{result.verdict}</span>
+                  <div>
+                    <VerdictBadge verdict={result.verdict} size="lg" />
+                  </div>
                 </div>
-                <p className="text-xs text-text-primary mt-1 font-mono">{result.reason}</p>
+                <p className="text-xs text-text-primary mt-1 font-mono leading-relaxed break-words">{result.reason}</p>
               </div>
 
               {result.chain_tx && (
-                <div className="shrink-0 text-left sm:text-right font-mono text-[11px]">
+                <div className="shrink-0 text-left sm:text-right font-mono text-[11px] pt-2 sm:pt-0 border-t sm:border-t-0 border-stark-border/40 w-full sm:w-auto">
                   <span className="text-text-muted block text-[10px]">ON-CHAIN AUDIT LOGGED</span>
-                  <span className="text-stark-cyan font-bold break-all">Tx: {result.chain_tx.slice(0, 12)}...</span>
+                  <span className="text-stark-cyan font-bold break-all">Tx: {result.chain_tx.slice(0, 14)}...</span>
                 </div>
               )}
             </div>
@@ -539,15 +541,15 @@ export default function ConsumerVerifyPage() {
               <h4 className="text-xs font-mono font-bold text-text-secondary uppercase">
                 Cryptographic Signal Diagnostics
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
-                <div className="p-3 rounded-xl bg-bg-main border border-stark-border flex justify-between items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 text-xs font-mono">
+                <div className="p-3 rounded-xl bg-bg-main border border-stark-border flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1">
                   <span className="text-text-secondary">EVM Blockchain Status:</span>
                   <span className={`font-bold ${result.on_chain ? "text-stark-emerald" : "text-stark-red"}`}>
                     {result.on_chain ? "✓ Enrolled on L1 Ledger" : "✗ Not Found On-Chain"}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-bg-main border border-stark-border flex justify-between items-center">
+                <div className="p-3 rounded-xl bg-bg-main border border-stark-border flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1">
                   <span className="text-text-secondary">Token Identity Check:</span>
                   <span className={`font-bold ${result.identity_result === "valid" ? "text-stark-emerald" : "text-stark-red"}`}>
                     {result.identity_result === "valid" ? "✓ Valid Cryptogram" : `✗ ${result.identity_result}`}
@@ -555,8 +557,8 @@ export default function ConsumerVerifyPage() {
                 </div>
 
                 <div className="p-3 rounded-xl bg-bg-main border border-stark-border flex flex-col justify-center">
-                  <div className="flex justify-between items-center">
-                    <span className="text-text-secondary">AI Visual Match (MobileNetV2):</span>
+                  <div className="flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1">
+                    <span className="text-text-secondary">AI Visual Match:</span>
                     <span
                       className={`font-bold ${
                         result.image_result === "genuine"
@@ -578,13 +580,13 @@ export default function ConsumerVerifyPage() {
                     </span>
                   </div>
                   {result.image_reason && (
-                    <p className="text-[10px] text-text-muted mt-1 truncate">
+                    <p className="text-[10px] text-text-muted mt-1 break-words leading-normal">
                       {result.image_reason}
                     </p>
                   )}
                 </div>
 
-                <div className="p-3 rounded-xl bg-bg-main border border-stark-border flex justify-between items-center">
+                <div className="p-3 rounded-xl bg-bg-main border border-stark-border flex flex-col xs:flex-row xs:justify-between xs:items-center gap-1">
                   <span className="text-text-secondary">Spatial / Attack Risk Score:</span>
                   <span className={`font-bold ${(result.risk_score || 0) > 0.4 ? "text-stark-red" : "text-stark-emerald"}`}>
                     {result.risk_score !== null ? result.risk_score.toFixed(3) : "0.000 (Low Risk)"}
@@ -594,31 +596,31 @@ export default function ConsumerVerifyPage() {
             </div>
 
             {/* Post-Purchase Action */}
-            <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-stark-border">
+            <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-stark-border">
               <div className="text-xs text-text-secondary font-mono">
                 Lifecycle State: <strong className={result.sold ? "text-stark-amber" : "text-stark-emerald"}>{result.sold ? "SOLD (Purchased)" : "UNSOLD (Available for Sale)"}</strong>
               </div>
 
-              <div className="flex gap-2 items-center">
+              <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center w-full sm:w-auto">
                 {result.verdict === "Verified" && !result.sold && (
                   <button
                     type="button"
                     disabled={markingSold}
                     onClick={handleMarkSold}
-                    className="px-4 py-2 rounded-xl bg-stark-emerald text-white text-xs font-bold font-mono hover:opacity-95 transition-all shadow-sm disabled:opacity-50"
+                    className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-stark-emerald text-white text-xs font-bold font-mono hover:opacity-95 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center text-center"
                   >
                     {markingSold ? "Broadcasting..." : "🛍️ Mark as Purchased (Sold on Chain)"}
                   </button>
                 )}
                 {result.verdict !== "Verified" && !result.sold && (
-                  <span className="text-xs font-mono font-semibold text-stark-amber bg-stark-amber/10 border border-stark-amber/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                  <span className="text-xs font-mono font-semibold text-stark-amber bg-stark-amber/10 border border-stark-amber/30 px-3.5 py-2.5 rounded-xl flex items-center justify-center gap-1.5 text-center">
                     <span>⚠️</span> Purchase Blocked (Unverified Asset)
                   </span>
                 )}
                 {result.verdict !== "Verified" && (
                   <Link
                     to={`/consumer/report?pid=${result.product_id}`}
-                    className="px-4 py-2 rounded-xl bg-stark-red text-white text-xs font-bold font-mono hover:opacity-95 transition-all shadow-sm"
+                    className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-stark-red text-white text-xs font-bold font-mono hover:opacity-95 transition-all shadow-sm flex items-center justify-center text-center"
                   >
                     ⚠️ Report Counterfeit Item
                   </Link>

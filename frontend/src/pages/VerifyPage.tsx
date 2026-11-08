@@ -482,7 +482,7 @@ export default function VerifyPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-stark-cyan to-stark-blue text-white font-bold text-xs tracking-wider uppercase shadow-stark-glow hover:opacity-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 min-h-[44px] rounded-xl bg-gradient-to-r from-stark-cyan to-stark-blue text-white font-bold text-xs tracking-wider uppercase shadow-stark-glow hover:opacity-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -622,16 +622,16 @@ export default function VerifyPage() {
                   }
                 }}
                 disabled={markingSold}
-                className="px-4 py-2 bg-gradient-to-r from-stark-emerald to-emerald-600 hover:opacity-95 text-white font-semibold text-xs rounded-xl shadow-md whitespace-nowrap transition disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] bg-gradient-to-r from-stark-emerald to-emerald-600 hover:opacity-95 text-white font-semibold text-xs rounded-xl shadow-md whitespace-nowrap transition disabled:opacity-50 flex items-center justify-center"
               >
                 {markingSold ? "Submitting On-Chain..." : "🏷️ Mark as Sold"}
               </button>
             ) : !result.sold ? (
-              <span className="text-xs font-mono font-bold text-stark-amber bg-stark-amber/10 px-3 py-1.5 rounded-lg border border-stark-amber/30">
+              <span className="w-full sm:w-auto text-xs font-mono font-bold text-stark-amber bg-stark-amber/10 px-3.5 py-2.5 min-h-[44px] rounded-lg border border-stark-amber/30 flex items-center justify-center text-center">
                 Sale Blocked (Item Not Verified)
               </span>
             ) : (
-              <span className="text-xs font-mono font-bold text-stark-amber bg-stark-amber/10 px-3 py-1.5 rounded-lg border border-stark-amber/30">
+              <span className="w-full sm:w-auto text-xs font-mono font-bold text-stark-amber bg-stark-amber/10 px-3.5 py-2.5 min-h-[44px] rounded-lg border border-stark-amber/30 flex items-center justify-center text-center">
                 Already Sold
               </span>
             )}
@@ -659,7 +659,7 @@ export default function VerifyPage() {
         <div className="flex flex-col sm:flex-row gap-2.5">
           <input
             type="text"
-            className="flex-1 rounded-lg bg-bg-input border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
+            className="flex-1 rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-xs font-mono text-text-primary placeholder-text-muted focus:outline-none focus:border-stark-cyan focus:ring-1 focus:ring-stark-cyan shadow-sm transition-colors"
             placeholder="0x... or PRD-... Product ID"
             value={manualSoldId}
             onChange={(e) => setManualSoldId(e.target.value.trim())}
@@ -680,7 +680,7 @@ export default function VerifyPage() {
               }
             }}
             disabled={markingSold || !manualSoldId}
-            className="px-4 py-2 bg-gradient-to-r from-stark-emerald to-emerald-600 hover:opacity-95 text-white font-semibold text-xs rounded-xl shadow-md whitespace-nowrap transition disabled:opacity-50"
+            className="w-full sm:w-auto px-5 py-2.5 min-h-[44px] bg-gradient-to-r from-stark-emerald to-emerald-600 hover:opacity-95 text-white font-semibold text-xs rounded-xl shadow-md whitespace-nowrap transition disabled:opacity-50 flex items-center justify-center text-center"
           >
             {markingSold ? "Broadcasting Tx..." : "🏷️ Mark as Sold"}
           </button>

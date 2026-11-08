@@ -4,31 +4,31 @@ import Card from "../../components/Card";
 
 export default function ConsumerHomePage() {
   return (
-    <div className="space-y-12 pb-12">
+    <div className="space-y-8 sm:space-y-12 pb-12">
       {/* ── Hero Banner ── */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-bg-card via-bg-card to-bg-elevated border border-stark-border p-8 sm:p-12 shadow-xl">
-        <div className="relative z-10 max-w-3xl space-y-5">
+      <section className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-bg-card via-bg-card to-bg-elevated border border-stark-border p-5 sm:p-12 shadow-xl">
+        <div className="relative z-10 max-w-3xl space-y-4 sm:space-y-5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stark-cyan/10 border border-stark-cyan/30 text-stark-cyan text-xs font-mono font-bold">
             <span>🛡️</span> AETHER CRYPTOGRAPHIC VERIFICATION
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-text-heading tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-5xl font-extrabold text-text-heading tracking-tight leading-tight">
             Verify Physical Authenticity with{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-stark-cyan to-[#168BFF]">
               Three-Layer Security
             </span>
           </h1>
 
-          <p className="text-sm sm:text-base text-text-secondary leading-relaxed max-w-2xl">
+          <p className="text-xs sm:text-base text-text-secondary leading-relaxed max-w-2xl">
             Legacy barcodes and static QR codes are easily photocopied. AETHER protects you by fusing
             signed cryptographic QR codes, tamper-evident NTAG 424 SUN chips, Ethereum blockchain records,
             and MobileNetV2 computer vision lookalike detection.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2 sm:pt-3">
             <Link
               to="/consumer/verify"
-              className="px-6 py-3.5 rounded-2xl bg-stark-cyan text-white text-sm font-bold font-mono tracking-wide hover:bg-stark-cyan/90 transition-all shadow-lg shadow-stark-cyan/20 text-center flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 py-3.5 min-h-[44px] rounded-2xl bg-stark-cyan text-white text-xs sm:text-sm font-bold font-mono tracking-wide hover:bg-stark-cyan/90 transition-all shadow-lg shadow-stark-cyan/20 text-center flex items-center justify-center gap-2"
             >
               <span>⚡</span>
               <span>Verify Product Now</span>
@@ -36,7 +36,7 @@ export default function ConsumerHomePage() {
 
             <Link
               to="/consumer/about"
-              className="px-6 py-3.5 rounded-2xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-sm font-semibold text-text-secondary text-center transition-all"
+              className="w-full sm:w-auto px-6 py-3.5 min-h-[44px] rounded-2xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs sm:text-sm font-semibold text-text-secondary text-center transition-all flex items-center justify-center"
             >
               How It Works &rarr;
             </Link>
@@ -49,11 +49,11 @@ export default function ConsumerHomePage() {
 
       {/* ── Why Legacy Barcodes Fail vs AETHER ── */}
       <section className="space-y-4">
-        <div className="text-center max-w-2xl mx-auto space-y-1.5">
+        <div className="text-center max-w-2xl mx-auto space-y-1.5 px-2">
           <span className="text-xs font-mono text-stark-cyan uppercase tracking-wider block">
             RESEARCH PAPER FOUNDATION // HACP5
           </span>
-          <h2 className="text-2xl font-bold text-text-heading">
+          <h2 className="text-xl sm:text-2xl font-bold text-text-heading">
             Why Traditional Verification Is Broken
           </h2>
           <p className="text-xs text-text-secondary leading-relaxed">
@@ -61,7 +61,7 @@ export default function ConsumerHomePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pt-2 sm:pt-4">
           <Card
             title="Layer 1a: Dynamic Tokens"
             subtitle="Signed QR HMAC & NTAG 424 SUN"

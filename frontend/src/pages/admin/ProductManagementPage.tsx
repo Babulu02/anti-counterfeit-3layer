@@ -66,14 +66,14 @@ export default function ProductManagementPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
         <div>
           <input
             type="text"
             placeholder="Search by Product ID, Short ID, name, serial..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl bg-bg-card border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
+            className="w-full rounded-xl bg-bg-card border border-stark-border px-3.5 py-2.5 min-h-[44px] text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan shadow-sm"
           />
         </div>
 
@@ -81,7 +81,7 @@ export default function ProductManagementPage() {
           <select
             value={selectedBrand}
             onChange={(e) => setSelectedBrand(e.target.value)}
-            className="w-full rounded-xl bg-bg-card border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
+            className="w-full rounded-xl bg-bg-card border border-stark-border px-3.5 py-2.5 min-h-[44px] text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan shadow-sm"
           >
             <option value="all">All Brands ({brands.length})</option>
             {brands.map((b) => (
@@ -96,7 +96,7 @@ export default function ProductManagementPage() {
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="w-full rounded-xl bg-bg-card border border-stark-border px-3.5 py-2 text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
+            className="w-full rounded-xl bg-bg-card border border-stark-border px-3.5 py-2.5 min-h-[44px] text-xs font-mono text-text-primary focus:outline-none focus:border-stark-cyan shadow-sm"
           >
             <option value="all">All Lifecycle States</option>
             <option value="registered">Registered (In Circulation)</option>

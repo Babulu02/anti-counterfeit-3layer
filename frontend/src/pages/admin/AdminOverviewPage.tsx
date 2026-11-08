@@ -75,24 +75,24 @@ export default function AdminOverviewPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono transition-all ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 min-h-[40px] rounded-xl border text-xs font-mono transition-all ${
               autoRefresh
                 ? "bg-stark-emerald/10 border-stark-emerald/30 text-stark-emerald"
                 : "bg-bg-card border-stark-border text-text-muted"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${autoRefresh ? "bg-stark-emerald animate-pulse" : "bg-text-muted"}`} />
-            <span>{autoRefresh ? "LIVE STREAM (4s)" : "STREAM PAUSED"}</span>
+            <span className={`w-2 h-2 rounded-full shrink-0 ${autoRefresh ? "bg-stark-emerald animate-pulse" : "bg-text-muted"}`} />
+            <span>{autoRefresh ? "LIVE (4s)" : "PAUSED"}</span>
           </button>
 
           <button
             type="button"
             onClick={() => fetchData(false)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-mono text-stark-cyan transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 min-h-[40px] rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-mono text-stark-cyan transition-colors"
           >
             <span>🔄</span>
             <span>Refresh</span>

@@ -138,9 +138,9 @@ export default function ConsumerReportPage() {
           <div className="flex justify-end pt-2 border-t border-stark-border">
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-stark-red text-white font-bold hover:opacity-90 transition-all shadow-md"
+              className="w-full sm:w-auto px-6 py-3 min-h-[44px] rounded-xl bg-stark-red text-white text-xs font-bold font-mono hover:bg-stark-red/90 transition-all shadow-md flex items-center justify-center text-center"
             >
-              Submit Report to Security Team
+              Submit Fraud Report
             </button>
           </div>
         </form>

@@ -68,7 +68,7 @@ export default function ConsumerHistoryPage() {
           <button
             type="button"
             onClick={clearHistory}
-            className="px-3 py-1.5 rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-mono text-text-muted hover:text-stark-red transition-colors"
+            className="w-full sm:w-auto px-3.5 py-2 min-h-[38px] rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs font-mono text-text-muted hover:text-stark-red transition-colors flex items-center justify-center"
           >
             Clear History
           </button>
@@ -82,7 +82,7 @@ export default function ConsumerHistoryPage() {
             <p className="text-xs text-text-secondary">No verification scans recorded yet on this device.</p>
             <Link
               to="/consumer/verify"
-              className="inline-block px-5 py-2.5 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm"
+              className="inline-flex items-center justify-center w-full sm:w-auto px-5 py-2.5 min-h-[44px] rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm"
             >
               Scan Your First Product &rarr;
             </Link>
@@ -108,10 +108,10 @@ export default function ConsumerHistoryPage() {
                   </span>
                 </div>
 
-                <div className="shrink-0">
+                <div className="shrink-0 w-full sm:w-auto">
                   <Link
                     to={`/consumer/result?pid=${scan.productId}&verdict=${scan.verdict}`}
-                    className="px-3 py-1.5 rounded-lg bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs text-stark-cyan font-semibold block text-center"
+                    className="w-full sm:w-auto px-4 py-2 min-h-[38px] rounded-lg bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-xs text-stark-cyan font-semibold flex items-center justify-center text-center"
                   >
                     View Proof &rarr;
                   </Link>

@@ -105,7 +105,7 @@ export default function UserManagementPage() {
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className="px-4 py-2 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center gap-1.5"
+          className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center justify-center gap-1.5"
         >
           <span>+</span>
           <span>Assign Account</span>
@@ -228,14 +228,14 @@ export default function UserManagementPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-2xl bg-bg-card border border-stark-border shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-bg-card border border-stark-border shadow-2xl p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-stark-border pb-3">
               <h3 className="text-base font-bold text-text-heading">Assign New Platform Identity</h3>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="text-text-muted hover:text-text-heading"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text-heading hover:bg-bg-elevated"
               >
                 ✕
               </button>
@@ -250,7 +250,7 @@ export default function UserManagementPage() {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="e.g. Regional Quality Inspector"
-                  className="w-full rounded-lg bg-bg-input border border-stark-border px-3 py-2 text-text-primary focus:outline-none focus:border-stark-cyan"
+                  className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
                 />
               </div>
 
@@ -259,7 +259,7 @@ export default function UserManagementPage() {
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as UserRole)}
-                  className="w-full rounded-lg bg-bg-input border border-stark-border px-3 py-2 font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
+                  className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
                 >
                   <option value="ADMIN">ADMIN (Superuser / Security)</option>
                   <option value="MANUFACTURER">MANUFACTURER (Production & NFC)</option>
@@ -275,21 +275,21 @@ export default function UserManagementPage() {
                   value={newWallet}
                   onChange={(e) => setNewWallet(e.target.value)}
                   placeholder="0x..."
-                  className="w-full rounded-lg bg-bg-input border border-stark-border px-3 py-2 font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
+                  className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] font-mono text-text-primary focus:outline-none focus:border-stark-cyan"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-stark-border">
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-3 border-t border-stark-border">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-text-secondary font-semibold"
+                  className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-text-secondary font-semibold flex items-center justify-center text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-stark-cyan text-white font-bold hover:bg-stark-cyan/90 transition-all shadow-sm"
+                  className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-xl bg-stark-cyan text-white font-bold hover:bg-stark-cyan/90 transition-all shadow-sm flex items-center justify-center text-center"
                 >
                   Save Account
                 </button>

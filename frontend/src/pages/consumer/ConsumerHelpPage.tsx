@@ -70,7 +70,7 @@ export default function ConsumerHelpPage() {
           {faqs.map((f, i) => (
             <div
               key={i}
-              className="p-3.5 rounded-xl bg-bg-main border border-stark-border cursor-pointer transition-colors"
+              className="p-3.5 min-h-[44px] rounded-xl bg-bg-main border border-stark-border cursor-pointer transition-colors flex flex-col justify-center"
               onClick={() => setOpenFaq(openFaq === i ? null : i)}
             >
               <div className="flex items-center justify-between font-bold text-xs text-text-heading">

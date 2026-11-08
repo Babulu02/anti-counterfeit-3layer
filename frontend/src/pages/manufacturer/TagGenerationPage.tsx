@@ -129,7 +129,7 @@ export default function TagGenerationPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. AetherCare Biologic 50mg"
-                    className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
+                    className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
                   />
                 </div>
 
@@ -141,7 +141,7 @@ export default function TagGenerationPage() {
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
                     placeholder="e.g. Adidas, Nike, Dettol, Bisleri"
-                    className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
+                    className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
                   />
                 </div>
               </div>
@@ -154,7 +154,7 @@ export default function TagGenerationPage() {
                   value={serial}
                   onChange={(e) => setSerial(e.target.value)}
                   placeholder="SN-102938"
-                  className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
+                  className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-text-primary focus:outline-none focus:border-stark-cyan"
                 />
               </div>
 
@@ -210,7 +210,7 @@ export default function TagGenerationPage() {
                     required
                     value={mfrAddress}
                     onChange={(e) => setMfrAddress(e.target.value)}
-                    className="w-full rounded-xl bg-bg-input border border-stark-border px-3 py-2 text-[11px] text-text-primary focus:outline-none focus:border-stark-cyan"
+                    className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-[11px] text-text-primary focus:outline-none focus:border-stark-cyan"
                   />
                 </div>
 
@@ -221,7 +221,7 @@ export default function TagGenerationPage() {
                     required
                     value={mfrKey}
                     onChange={(e) => setMfrKey(e.target.value)}
-                    className="w-full rounded-xl bg-bg-input border border-stark-border px-3 py-2 text-[11px] text-text-primary focus:outline-none focus:border-stark-cyan"
+                    className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 min-h-[44px] text-[11px] text-text-primary focus:outline-none focus:border-stark-cyan"
                   />
                 </div>
               </div>
@@ -236,7 +236,7 @@ export default function TagGenerationPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono tracking-wide hover:bg-stark-cyan/90 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 min-h-[44px] rounded-xl bg-stark-cyan text-white text-xs font-bold font-mono tracking-wide hover:bg-stark-cyan/90 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <>
@@ -271,7 +271,7 @@ export default function TagGenerationPage() {
                   <button
                     type="button"
                     onClick={() => copyToClipboard(receipt.short_id || receipt.product.product_id, "short")}
-                    className="px-2.5 py-1 rounded bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-[11px] text-stark-cyan"
+                    className="px-3 py-2 min-h-[38px] rounded-lg bg-bg-elevated hover:bg-bg-secondary border border-stark-border text-[11px] text-stark-cyan flex items-center justify-center"
                   >
                     {copied === "short" ? "✓ Copied" : "Copy ID"}
                   </button>
@@ -279,15 +279,15 @@ export default function TagGenerationPage() {
 
                 {/* QR Code Preview */}
                 {qrDataUrl && (
-                  <div className="p-4 rounded-xl bg-white text-center border border-stark-border space-y-2">
-                    <img src={qrDataUrl} alt="Product QR" className="w-48 h-48 mx-auto" />
-                    <span className="text-[10px] font-mono text-gray-700 block">
+                  <div className="p-4 rounded-xl bg-white text-center border border-stark-border space-y-2.5">
+                    <img src={qrDataUrl} alt="Product QR" className="w-44 h-44 sm:w-48 sm:h-48 mx-auto" />
+                    <span className="text-[10px] font-mono text-gray-700 block break-all">
                       Signed HMAC Dynamic Token: {receipt.short_id}
                     </span>
                     <a
                       href={qrDataUrl}
                       download={`${receipt.short_id || "product"}-qr.png`}
-                      className="inline-block px-3 py-1 rounded-lg bg-gray-900 text-white text-[11px] font-semibold hover:bg-black"
+                      className="inline-flex items-center justify-center px-4 py-2 min-h-[40px] rounded-lg bg-gray-900 text-white text-xs font-semibold hover:bg-black w-full sm:w-auto text-center"
                     >
                       Download Printable QR Tag
                     </a>
@@ -326,7 +326,7 @@ export default function TagGenerationPage() {
 
                 <Link
                   to={`/consumer/verify?pid=${receipt.short_id || receipt.product.product_id}`}
-                  className="w-full py-2.5 rounded-xl bg-stark-emerald text-white text-xs font-bold text-center block hover:opacity-95 shadow-sm"
+                  className="w-full py-3 min-h-[44px] rounded-xl bg-stark-emerald text-white text-xs font-bold text-center flex items-center justify-center hover:opacity-95 shadow-sm"
                 >
                   ⚡ Test Product in Consumer Verification &rarr;
                 </Link>

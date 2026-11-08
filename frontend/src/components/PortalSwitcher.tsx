@@ -48,18 +48,21 @@ export const PortalSwitcher: React.FC = () => {
       <button
         type="button"
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-bg-card hover:bg-bg-elevated border border-stark-border text-xs font-mono transition-all shadow-sm group"
+        className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-2 min-h-[40px] rounded-xl bg-bg-card hover:bg-bg-elevated border border-stark-border text-xs font-mono transition-all shadow-sm group shrink-0"
         title="Switch Portal Role"
       >
-        <span className="text-sm">{currentPortal.icon}</span>
-        <span className="font-semibold text-text-heading group-hover:text-stark-cyan transition-colors">
+        <span className="text-sm shrink-0">{currentPortal.icon}</span>
+        <span className="font-semibold text-text-heading group-hover:text-stark-cyan transition-colors hidden sm:inline truncate max-w-[140px]">
           {currentPortal.label}
         </span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-stark-cyan/10 text-stark-cyan border border-stark-cyan/20">
+        <span className="font-semibold text-text-heading group-hover:text-stark-cyan transition-colors sm:hidden">
+          {role === "MANUFACTURER" ? "Producer" : role === "CONSUMER" ? "Consumer" : "Admin"}
+        </span>
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-stark-cyan/10 text-stark-cyan border border-stark-cyan/20 hidden md:inline">
           {role}
         </span>
         <svg
-          className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 ${
+          className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 shrink-0 ${
             dropdownOpen ? "rotate-180" : ""
           }`}
           fill="none"
@@ -73,10 +76,10 @@ export const PortalSwitcher: React.FC = () => {
       {dropdownOpen && (
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-xs"
             onClick={() => setDropdownOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-bg-card border border-stark-border shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute right-0 mt-2 w-[calc(100vw-24px)] max-w-xs sm:w-72 rounded-2xl bg-bg-card border border-stark-border shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-100">
             <div className="px-3 py-2 border-b border-stark-border/60">
               <span className="text-[10px] font-mono tracking-wider text-text-muted uppercase block">
                 AETHER // ROLE PORTAL SELECTOR
