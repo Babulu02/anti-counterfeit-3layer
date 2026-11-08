@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { postScan, sellProduct, type ScanResponse } from "../lib/api";
+import { resizeImageFile } from "../lib/imageUtils";
 import VerdictBadge from "../components/VerdictBadge";
 import SignalRow from "../components/SignalRow";
 import Card from "../components/Card";
@@ -113,7 +114,7 @@ export default function VerifyPage() {
     }
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -123,15 +124,23 @@ export default function VerifyPage() {
     }
 
     setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setImagePreview(dataUrl);
-      const base64Content = dataUrl.split(",")[1];
-      setImageBase64(base64Content);
-    };
-    reader.readAsDataURL(file);
     setError(null);
+
+    try {
+      // Downscale to max 512px client-side to ensure instant transfer and 0 cloud memory pressure
+      const { dataUrl, base64 } = await resizeImageFile(file, 512, 0.82);
+      setImagePreview(dataUrl);
+      setImageBase64(base64);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        setImagePreview(dataUrl);
+        const base64Content = dataUrl.split(",")[1];
+        setImageBase64(base64Content);
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   function removeImage() {

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Link, useNavigate } from "react-router-dom";
 import { postScan, sellProduct, getProduct, type ScanResponse, type ProductOut } from "../../lib/api";
+import { resizeImageFile } from "../../lib/imageUtils";
 import VerdictBadge from "../../components/VerdictBadge";
 import SignalRow from "../../components/SignalRow";
 import Card from "../../components/Card";
@@ -115,19 +116,26 @@ export default function ConsumerVerifyPage() {
     }
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setImageFile(file);
-    const url = URL.createObjectURL(file);
-    setImagePreview(url);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const b64 = (reader.result as string).split(",")[1];
-      setImageBase64(b64);
-    };
-    reader.readAsDataURL(file);
+    try {
+      // Downscale to max 512px client-side to ensure instant transfer and 0 cloud memory pressure
+      const { dataUrl, base64 } = await resizeImageFile(file, 512, 0.82);
+      setImagePreview(dataUrl);
+      setImageBase64(base64);
+    } catch {
+      // Fallback to standard reader if canvas is unavailable
+      const reader = new FileReader();
+      reader.onload = () => {
+        const rawUrl = reader.result as string;
+        setImagePreview(rawUrl);
+        setImageBase64(rawUrl.split(",")[1]);
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   function removeImage() {

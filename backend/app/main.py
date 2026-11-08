@@ -208,6 +208,20 @@ def _classify_image_safe(
     Returns (label, similarity, reason_detail).
     """
     try:
+        # Server-side guard: downscale oversized image bytes to protect 512MB RAM container
+        if len(query_bytes) > 150_000:
+            try:
+                from PIL import Image
+                import io
+                with Image.open(io.BytesIO(query_bytes)) as s_img:
+                    if max(s_img.size) > 512:
+                        s_img.thumbnail((512, 512), Image.Resampling.LANCZOS)
+                        s_buf = io.BytesIO()
+                        s_img.convert("RGB").save(s_buf, format="JPEG", quality=82)
+                        query_bytes = s_buf.getvalue()
+            except Exception:
+                pass
+
         from ml.image_signal.ocr_checker import verify_label_text
 
         # ── 1. OCR Brand Verification (Runs first) ──

@@ -3,14 +3,15 @@ ml/image_signal/ocr_checker.py
 ==============================
 Optical Character Recognition (OCR) and deceptive brand lookalike detector.
 Uses RapidOCR to inspect physical packaging labels for counterfeit spelling
-substitutions (e.g. 'Bislie' vs 'Bisleri', 'Adibas' vs 'Adidas').
+substitutions (e.g. 'DEVTOL' vs 'Dettol', 'Bislie' vs 'Bisleri', 'Adibas' vs 'Adidas',
+'Mike' vs 'Nike').
 """
 
 from __future__ import annotations
 import difflib
+import gc
 import io
 import re
-from functools import lru_cache
 from typing import Optional
 
 import numpy as np
@@ -18,16 +19,31 @@ from PIL import Image
 
 _OCR_INSTANCE = None
 
+# Common generic categories that should not trigger false trademark matches
+CATEGORY_WORDS = {
+    "hand", "sanitizer", "soap", "water", "shoes", "shoe", "shirt", "tshirt",
+    "jacket", "bottle", "drink", "drinking", "packaged", "running", "liquid",
+    "protection", "spray", "original", "product", "item", "care", "brand",
+    "edition", "classic", "clean", "pure", "oil", "tea", "milk", "cream",
+    "the", "and", "for", "with", "from", "plus", "germ", "germs", "kill",
+    "kills", "anti", "bacterial", "medical", "grade"
+}
+
 
 def get_ocr():
-    """Lazy-load the RapidOCR engine singleton."""
+    """Lazy-load the RapidOCR engine singleton with lightweight settings."""
     global _OCR_INSTANCE
     if _OCR_INSTANCE is None:
         try:
             from rapidocr_onnxruntime import RapidOCR
-            _OCR_INSTANCE = RapidOCR()
+            # Initialize with single-threaded mode to keep memory footprint < 40MB on free cloud tiers
+            _OCR_INSTANCE = RapidOCR(intra_op_num_threads=1, inter_op_num_threads=1)
         except Exception:
-            _OCR_INSTANCE = False
+            try:
+                from rapidocr_onnxruntime import RapidOCR
+                _OCR_INSTANCE = RapidOCR()
+            except Exception:
+                _OCR_INSTANCE = False
     return _OCR_INSTANCE if _OCR_INSTANCE is not False else None
 
 
@@ -42,6 +58,7 @@ def verify_label_text(
     Returns dict with keys:
         status: "genuine" | "counterfeit" | "inconclusive"
         detected_words: list[str]
+        matched_token?: str
         reason: str
     """
     ocr = get_ocr()
@@ -54,11 +71,13 @@ def verify_label_text(
 
     try:
         pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        # Resize to max 480px to optimize CPU inference time and prevent cloud HTTP gateway timeouts
-        if max(pil_img.size) > 480:
-            pil_img.thumbnail((480, 480))
+        # Resize to max 400px to ensure CPU inference finishes in ~1s and avoids cloud OOM
+        if max(pil_img.size) > 400:
+            pil_img.thumbnail((400, 400), Image.Resampling.LANCZOS)
         img_np = np.array(pil_img)
         results, _ = ocr(img_np)
+        del pil_img, img_np
+        gc.collect()
     except Exception as exc:
         return {
             "status": "inconclusive",
@@ -79,63 +98,70 @@ def verify_label_text(
         if len(item) >= 2 and item[1]:
             extracted_words.append(str(item[1]).strip())
 
-    brand_clean = target_brand.strip().lower()
-    name_clean = target_name.strip().lower()
+    # Collect target brand and product keywords, filtering out generic category stopwords
+    brand_tokens = [
+        w.lower() for w in re.findall(r"[A-Za-z0-9]+", target_brand or "")
+        if len(w) >= 3 and w.lower() not in CATEGORY_WORDS
+    ]
+    name_tokens = [
+        w.lower() for w in re.findall(r"[A-Za-z0-9]+", target_name or "")
+        if len(w) >= 3 and w.lower() not in CATEGORY_WORDS
+    ]
 
-    # Search for exact or deceptive match
+    all_targets = set(brand_tokens + name_tokens)
+    if target_brand and target_brand.strip().lower() not in CATEGORY_WORDS:
+        all_targets.add(target_brand.strip().lower())
+
+    exact_matches: list[tuple[str, str]] = []
+    lookalikes: list[tuple[str, str, float]] = []
+
     for text in extracted_words:
-        # Tokenize by words and alphanumeric
         tokens = re.findall(r"[A-Za-z0-9]+", text)
         for token in tokens:
             t_lower = token.lower()
-            if not t_lower:
+            if len(t_lower) < 3 or t_lower in CATEGORY_WORDS:
                 continue
 
-            # Check against brand
-            if brand_clean:
-                if t_lower == brand_clean:
-                    return {
-                        "status": "genuine",
-                        "detected_words": extracted_words,
-                        "matched_token": token,
-                        "reason": f"Brand text '{token}' verified on packaging",
-                    }
-                # Check for lookalike spoofing
-                ratio = difflib.SequenceMatcher(None, t_lower, brand_clean).ratio()
-                if 0.55 <= ratio < 1.0 and len(t_lower) >= 4 and len(brand_clean) >= 4:
-                    return {
-                        "status": "counterfeit",
-                        "detected_words": extracted_words,
-                        "matched_token": token,
-                        "reason": (
-                            f"Deceptive brand lookalike detected on label: '{token}' "
-                            f"instead of registered brand '{target_brand}' (similarity={ratio:.2f})"
-                        ),
-                    }
+            for tw in all_targets:
+                if t_lower == tw:
+                    exact_matches.append((token, tw))
+                else:
+                    ratio = difflib.SequenceMatcher(None, t_lower, tw).ratio()
+                    # 0.65 <= ratio < 1.0 isolates deceptive lookalikes:
+                    # DEVTOL vs Dettol (0.83), Adibas vs Adidas (0.83), Bislie vs Bisleri (0.77), Mike vs Nike (0.75)
+                    # while not confusing separate valid brands (e.g. Bailley vs Bisleri = 0.57)
+                    if 0.65 <= ratio < 1.0 and len(t_lower) >= 4 and len(tw) >= 4:
+                        lookalikes.append((token, tw, ratio))
+                    elif 0.70 <= ratio < 1.0 and (len(t_lower) == 3 or len(tw) == 3):
+                        lookalikes.append((token, tw, ratio))
 
-            # Check against name
-            if name_clean and name_clean != brand_clean:
-                if t_lower == name_clean:
-                    return {
-                        "status": "genuine",
-                        "detected_words": extracted_words,
-                        "matched_token": token,
-                        "reason": f"Product name '{token}' verified on packaging",
-                    }
-                ratio = difflib.SequenceMatcher(None, t_lower, name_clean).ratio()
-                if 0.60 <= ratio < 1.0 and len(t_lower) >= 4 and len(name_clean) >= 4:
-                    return {
-                        "status": "counterfeit",
-                        "detected_words": extracted_words,
-                        "matched_token": token,
-                        "reason": (
-                            f"Deceptive product name lookalike detected on label: '{token}' "
-                            f"instead of '{target_name}' (similarity={ratio:.2f})"
-                        ),
-                    }
+    # Deceptive lookalike found without exact brand presence -> Counterfeit!
+    if lookalikes and not exact_matches:
+        lookalikes.sort(key=lambda x: x[2], reverse=True)
+        best_tok, best_target, best_ratio = lookalikes[0]
+        return {
+            "status": "counterfeit",
+            "detected_words": extracted_words,
+            "matched_token": best_tok,
+            "reason": (
+                f"Deceptive brand lookalike detected on label: '{best_tok}' "
+                f"instead of registered keyword '{best_target}' (similarity={best_ratio:.2f})"
+            ),
+        }
 
+    # Exact brand text verified on label
+    if exact_matches:
+        best_tok, best_target = exact_matches[0]
+        return {
+            "status": "genuine",
+            "detected_words": extracted_words,
+            "matched_token": best_tok,
+            "reason": f"Brand text '{best_tok}' verified on packaging",
+        }
+
+    sample_words = ", ".join(extracted_words[:5]) if extracted_words else "none"
     return {
         "status": "inconclusive",
         "detected_words": extracted_words,
-        "reason": f"Extracted text ({', '.join(extracted_words[:5])}) does not contain brand keyword",
+        "reason": f"Extracted text ({sample_words}) does not contain brand keyword",
     }

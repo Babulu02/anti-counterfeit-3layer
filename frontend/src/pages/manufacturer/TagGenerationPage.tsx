@@ -7,6 +7,7 @@ import {
   type ProductOut,
   type ProductRegisterResponse,
 } from "../../lib/api";
+import { resizeImageFile } from "../../lib/imageUtils";
 import { useAuth } from "../../lib/auth";
 import Card from "../../components/Card";
 
@@ -38,12 +39,18 @@ export default function TagGenerationPage() {
       .catch(() => {});
   }, []);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setImageFile(file);
-      const url = URL.createObjectURL(file);
-      setImagePreview(url);
+      try {
+        const { dataUrl, blob } = await resizeImageFile(file, 640, 0.85);
+        const resizedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+        setImageFile(resizedFile);
+        setImagePreview(dataUrl);
+      } catch {
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -133,7 +140,7 @@ export default function TagGenerationPage() {
                     required
                     value={brand}
                     onChange={(e) => setBrand(e.target.value)}
-                    placeholder="e.g. AetherCare"
+                    placeholder="e.g. Adidas, Nike, Dettol, Bisleri"
                     className="w-full rounded-xl bg-bg-input border border-stark-border px-3.5 py-2.5 text-text-primary focus:outline-none focus:border-stark-cyan"
                   />
                 </div>
