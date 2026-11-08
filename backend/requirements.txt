@@ -5,9 +5,9 @@
 # All versions pinned to what is tested and installed (see docs/VERSIONS.md).
 
 # ── Identity layer (Phase 2) ────────────────────────────────────────────────
-qrcode[pil]==7.4.2
-pycryptodome==3.20.0
-Pillow==10.3.0
+qrcode[pil]>=7.4.2
+pycryptodome>=3.20.0
+Pillow>=10.4.0
 
 # ── Database (MySQL 9 locally via PyMySQL, PostgreSQL on Render/Cloud) ──────
 # cryptography is required by PyMySQL when connecting to MySQL 9 (caching_sha2_password)
