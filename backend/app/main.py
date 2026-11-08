@@ -21,15 +21,17 @@ import os
 import sys
 from pathlib import Path
 
-# Fix Windows Python 3.8+ DLL loading for PyTorch (c10.dll, torch_cpu.dll)
-_TORCH_LIB = Path(__file__).resolve().parents[1] / ".venv" / "Lib" / "site-packages" / "torch" / "lib"
-if _TORCH_LIB.exists() and hasattr(os, "add_dll_directory"):
-    try:
-        os.add_dll_directory(str(_TORCH_LIB))
-    except Exception:
-        pass
-
-import torch
+# Optional PyTorch loading for vision pipelines if installed
+try:
+    _TORCH_LIB = Path(__file__).resolve().parents[1] / ".venv" / "Lib" / "site-packages" / "torch" / "lib"
+    if _TORCH_LIB.exists() and hasattr(os, "add_dll_directory"):
+        try:
+            os.add_dll_directory(str(_TORCH_LIB))
+        except Exception:
+            pass
+    import torch
+except ImportError:
+    torch = None
 
 import hashlib
 import io
