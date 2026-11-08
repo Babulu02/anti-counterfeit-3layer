@@ -54,6 +54,9 @@ def verify_label_text(
 
     try:
         pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        # Resize to max 480px to optimize CPU inference time and prevent cloud HTTP gateway timeouts
+        if max(pil_img.size) > 480:
+            pil_img.thumbnail((480, 480))
         img_np = np.array(pil_img)
         results, _ = ocr(img_np)
     except Exception as exc:
